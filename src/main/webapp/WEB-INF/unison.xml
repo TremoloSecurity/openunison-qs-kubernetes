@@ -238,6 +238,13 @@
         <param>FORMLOGIN_JSP</param>
       </params>
     </mechanism>
+    <mechanism name="genoidctoken">
+      <uri>/auth/oidctoken</uri>
+      <className>com.tremolosecurity.proxy.auth.GenerateOIDCTokens</className>
+      <init>
+      </init>
+      <params />
+    </mechanism>
   </authMechs>
   <authChains>
     <!-- An anonymous authentication chain MUST be level 0 -->
@@ -268,6 +275,16 @@
           <param name="hd" value="" />
           <param name="loadTokenURL" value="#[OIDC_LOAD_TOKEN_URL]" />
           <param name="jwtTokenAttributeName" value="id_token" />
+        </params>
+      </authMech>
+      <authMech>
+        <name>genoidctoken</name>
+        <required>required</required>
+        <params>
+          <!-- The name of the OpenID Connect identity provider to use -->
+          <param name="idpName" value="oidc" />
+          <!-- The name of the trust to generate a session for -->
+          <param name="trustName" value="kubernetes" />
         </params>
       </authMech>
     </chain>
