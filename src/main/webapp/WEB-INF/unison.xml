@@ -72,6 +72,8 @@
               <param name="logoutURL" value="/logout"/>
               <!-- The URL to access ScaleMain -->
               <param name="homeURL" value="/"/>
+              <!-- When the below number of minutes are left in the user's session, warn the user -->
+              <param name="warnMinutesLeft" value="5" />
               <!-- Implementation of the token loader -->
               <param name="tokenClassName" value="com.tremolosecurity.scalejs.IdTokenLoader"/>
               <!-- Token specific parameters (see below) -->
@@ -109,6 +111,36 @@
         <scope>-1</scope>
       </cookieConfig>
     </application>
+    <application name=”CheckSession” azTimeoutMillis=”30000″ >
+      <urls>
+        <url regex=”false” authChain=”anon” overrideHost=”true” overrideReferer=”true”>
+          <host>#[OU_HOST]</host>
+          <filterChain>
+            <filter class=”com.tremolosecurity.proxy.filters.CheckSession”>
+              <!– The name of the application who’s session cookie data to check –>
+              <param name=”applicationName” value=k8s/>
+            </filter>
+          </filterChain>
+          <uri>/scale-token/sessioncheck</uri>
+          <results>
+            <azSuccess>
+            </azSuccess>
+          </results>
+          <azRules>
+            <rule scope=”dn” constraint=”o=Tremolo” />
+          </azRules>
+        </url>
+      </urls>
+      <cookieConfig>
+        <sessionCookieName>checksession</sessionCookieName>
+        <domain>#[OU_HOST]</domain>
+        <logoutURI>/scale-token/sessioncheck</logoutURI>
+        <keyAlias>session-unison</keyAlias>
+        <secure>false</secure>
+        <timeout>true</timeout>
+        <scope>-1</scope>
+      </cookieConfig>
+    </application>
     <application name="oidc" isApp="false">
       <!-- on a single URL is allowed on an identity provider -->
       <urls>
@@ -131,12 +163,12 @@
             <azFail>Default Login Failure</azFail>
           </results>
           <!-- Determine if the currently logged in user may access the idp.  If ANY rule succeeds, the authorization succeeds.
-                    The scope may be one of group, dn, filter, dynamicGroup or custom
-                    The constraint identifies what needs to be satisfied for the authorization to pass and is dependent on the scope:
-                      * group - The DN of the group in OpenUnison's virtual directory (must be an instance of groupOfUniqueNames)
-                      * dn - The base DN of the user or users in OpenUnison's virtual directory
-                      * dynamicGroup - The DN of the dynamic group in OpenUnison's virtual directory (must be an instance of groupOfUrls)
-                      * custom - An implementation of com.tremolosecurity.proxy.az.CustomAuthorization -->
+                              The scope may be one of group, dn, filter, dynamicGroup or custom
+                              The constraint identifies what needs to be satisfied for the authorization to pass and is dependent on the scope:
+                                * group - The DN of the group in OpenUnison's virtual directory (must be an instance of groupOfUniqueNames)
+                                * dn - The base DN of the user or users in OpenUnison's virtual directory
+                                * dynamicGroup - The DN of the dynamic group in OpenUnison's virtual directory (must be an instance of groupOfUrls)
+                                * custom - An implementation of com.tremolosecurity.proxy.az.CustomAuthorization -->
           <azRules>
             <rule scope="filter" constraint="(objectClass=*)"/>
           </azRules>
@@ -164,13 +196,13 @@
             <!-- strict - If true then ONLY attributes specificly named in the mapping will be added -->
             <mappings strict="true">
               <!-- Each mapping focusses on a single attribute
-                             targetAttributeName - The name of the attribute that will appear in the assertion
-                             sourceType - One of user, static, or composite
-                              * user - The name of an existing attribute on the user's object
-                              * static - A static value that does not change regardless of the user
-                              * composite - A mixture of user and static, allowing for one SAML attribute to be comprised of other attributes and static text.  Attributes are market as "${attributename}"
-                             targetAttributeSource - The value to be used based on the sourceType
-                           -->
+                                           targetAttributeName - The name of the attribute that will appear in the assertion
+                                           sourceType - One of user, static, or composite
+                                            * user - The name of an existing attribute on the user's object
+                                            * static - A static value that does not change regardless of the user
+                                            * composite - A mixture of user and static, allowing for one SAML attribute to be comprised of other attributes and static text.  Attributes are market as "${attributename}"
+                                           targetAttributeSource - The value to be used based on the sourceType
+                                         -->
               <mapping targetAttributeName="sub" targetAttributeSource="sub" sourceType="user"/>
             </mappings>
             <!-- Trusts establish a path between the OP and SP/RP -->
@@ -304,6 +336,13 @@
     </chain>
   </authChains>
   <resultGroups>
+    <resultGroup name="Default Login Failure">
+      <result>
+        <type>redirect</type>
+        <source>static</source>
+        <value>/auth/forms/defaultFailedLogin.jsp</value>
+      </result>
+    </resultGroup>
     <!-- The name attribute is how the resultGroup is referenced in the URL -->
     <resultGroup name="Logout">
       <!-- Each result should be listed -->
