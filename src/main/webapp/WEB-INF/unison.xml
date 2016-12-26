@@ -117,8 +117,7 @@
           <host>#[OU_HOST]</host>
           <filterChain>
             <filter class="com.tremolosecurity.proxy.filters.CheckSession">
-              <!– The name of the application who’s session cookie data to check –>
-              <param name="applicationName" value=k8s/>
+              <param name="applicationName" value="k8s"/>
             </filter>
           </filterChain>
           <uri>/scale-token/sessioncheck</uri>
