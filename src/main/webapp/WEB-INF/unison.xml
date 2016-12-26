@@ -111,14 +111,14 @@
         <scope>-1</scope>
       </cookieConfig>
     </application>
-    <application name=”CheckSession” azTimeoutMillis=”30000″ >
+    <application name="CheckSession" azTimeoutMillis="30000" >
       <urls>
-        <url regex=”false” authChain=”anon” overrideHost=”true” overrideReferer=”true”>
+        <url regex="false" authChain="anon" overrideHost="true" overrideReferer="true">
           <host>#[OU_HOST]</host>
           <filterChain>
-            <filter class=”com.tremolosecurity.proxy.filters.CheckSession”>
+            <filter class="com.tremolosecurity.proxy.filters.CheckSession">
               <!– The name of the application who’s session cookie data to check –>
-              <param name=”applicationName” value=k8s/>
+              <param name="applicationName" value=k8s/>
             </filter>
           </filterChain>
           <uri>/scale-token/sessioncheck</uri>
@@ -127,7 +127,7 @@
             </azSuccess>
           </results>
           <azRules>
-            <rule scope=”dn” constraint=”o=Tremolo” />
+            <rule scope="dn" constraint="o=Tremolo" />
           </azRules>
         </url>
       </urls>
