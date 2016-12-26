@@ -306,6 +306,7 @@
           <param name="hd" value="" />
           <param name="loadTokenURL" value="#[OIDC_LOAD_TOKEN_URL]" />
           <param name="jwtTokenAttributeName" value="id_token" />
+          <param name="defaultObjectClass" value="inetOrgPerson" />
         </params>
       </authMech>
       <authMech>
