@@ -115,7 +115,7 @@
         <!-- The regex and authChain attributes are ignored -->
         <url regex="false">
           <!-- Any number of host tags may be specified to allow for an application to work on multiple hosts.  Additionally an asterick (*) can be specified to make this URL available for ALL hosts -->
-          <host>mlb.tremolo.lan</host>
+          <host>#[OU_HOST]</host>
           <!-- The filterChain on an IdP is typically used to add attributes to the user prior to mapping into the assertion -->
           <filterChain>
           </filterChain>
@@ -180,7 +180,7 @@
                 <param name="clientID" value="kubernetes"/>
                 <param name="clientSecret" value="#[K8S_CLIENT_SECRET]"/>
                 <param name="redirectURI" value="#[K8S_URL]/redirect_uri"/>
-                <param name="codeLastMileKeyName" value="#[K8S_LASTMILE_KEY]"/>
+                <param name="codeLastMileKeyName" value="lastmile-k8s"/>
                 <param name="authChainName" value="formloginFilter"/>
                 <param name="codeTokenSkewMilis" value="60000"/>
                 <param name="accessTokenTimeToLive" value="60000"/>
@@ -270,7 +270,7 @@
           <param name="linkToDirectory" value="false" />
           <param name="noMatchOU" value="oidc" />
           <param name="lookupFilter" value="(uid=x)" />
-          <param name="uidAttr" value="#[OIDC_UID_ATTR]" />
+          <param name="uidAttr" value="sub" />
           <param name="userLookupClassName" value="com.tremolosecurity.unison.proxy.auth.openidconnect.loadUser.LoadJWTFromAccessToken" />
           <param name="hd" value="" />
           <param name="loadTokenURL" value="#[OIDC_LOAD_TOKEN_URL]" />
