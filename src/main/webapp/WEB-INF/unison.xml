@@ -63,7 +63,7 @@
           <filterChain>
             <filter class="com.tremolosecurity.scalejs.token.ws.ScaleToken">
               <!-- The name of the attribute that stores the value to be displayed when referencing the currently logged in user, ie cn or displayName -->
-              <param name="displayNameAttribute" value="displayName"/>
+              <param name="displayNameAttribute" value="mail"/>
               <!-- The title to show on the home page -->
               <param name="frontPage.title" value="Tokens for Kubernetes Kubectl"/>
               <!-- Sub text for the home page -->
@@ -140,7 +140,7 @@
         <scope>-1</scope>
       </cookieConfig>
     </application>
-    <application name="oidc" isApp="false">
+    <application name="OidcIdP" isApp="false">
       <!-- on a single URL is allowed on an identity provider -->
       <urls>
         <!-- The regex and authChain attributes are ignored -->
@@ -162,12 +162,12 @@
             <azFail>Default Login Failure</azFail>
           </results>
           <!-- Determine if the currently logged in user may access the idp.  If ANY rule succeeds, the authorization succeeds.
-                              The scope may be one of group, dn, filter, dynamicGroup or custom
-                              The constraint identifies what needs to be satisfied for the authorization to pass and is dependent on the scope:
-                                * group - The DN of the group in OpenUnison's virtual directory (must be an instance of groupOfUniqueNames)
-                                * dn - The base DN of the user or users in OpenUnison's virtual directory
-                                * dynamicGroup - The DN of the dynamic group in OpenUnison's virtual directory (must be an instance of groupOfUrls)
-                                * custom - An implementation of com.tremolosecurity.proxy.az.CustomAuthorization -->
+                                                                                          The scope may be one of group, dn, filter, dynamicGroup or custom
+                                                                                          The constraint identifies what needs to be satisfied for the authorization to pass and is dependent on the scope:
+                                                                                            * group - The DN of the group in OpenUnison's virtual directory (must be an instance of groupOfUniqueNames)
+                                                                                            * dn - The base DN of the user or users in OpenUnison's virtual directory
+                                                                                            * dynamicGroup - The DN of the dynamic group in OpenUnison's virtual directory (must be an instance of groupOfUrls)
+                                                                                            * custom - An implementation of com.tremolosecurity.proxy.az.CustomAuthorization -->
           <azRules>
             <rule scope="filter" constraint="(objectClass=*)"/>
           </azRules>
@@ -195,14 +195,14 @@
             <!-- strict - If true then ONLY attributes specificly named in the mapping will be added -->
             <mappings strict="true">
               <!-- Each mapping focusses on a single attribute
-                                           targetAttributeName - The name of the attribute that will appear in the assertion
-                                           sourceType - One of user, static, or composite
-                                            * user - The name of an existing attribute on the user's object
-                                            * static - A static value that does not change regardless of the user
-                                            * composite - A mixture of user and static, allowing for one SAML attribute to be comprised of other attributes and static text.  Attributes are market as "${attributename}"
-                                           targetAttributeSource - The value to be used based on the sourceType
-                                         -->
-              <mapping targetAttributeName="sub" targetAttributeSource="sub" sourceType="user"/>
+                                                                                                                               targetAttributeName - The name of the attribute that will appear in the assertion
+                                                                                                                               sourceType - One of user, static, or composite
+                                                                                                                                * user - The name of an existing attribute on the user's object
+                                                                                                                                * static - A static value that does not change regardless of the user
+                                                                                                                                * composite - A mixture of user and static, allowing for one SAML attribute to be comprised of other attributes and static text.  Attributes are market as "${attributename}"
+                                                                                                                               targetAttributeSource - The value to be used based on the sourceType
+                                                                                                                             -->
+              <mapping targetAttributeName="sub" targetAttributeSource="uid" sourceType="user"/>
             </mappings>
             <!-- Trusts establish a path between the OP and SP/RP -->
             <trusts>
@@ -276,6 +276,20 @@
       </init>
       <params />
     </mechanism>
+    <mechanism name="jit">
+      <uri>/auth/jit</uri>
+      <className>com.tremolosecurity.provisioning.auth.JITAuthMech</className>
+      <init>
+      </init>
+      <params>
+      </params>
+    </mechanism>
+    <mechanism name="map">
+      <uri>/auth/map</uri>
+      <className>com.tremolosecurity.proxy.auth.MappingAuthmech</className>
+      <init>
+      </init>
+    </mechanism>
   </authMechs>
   <authChains>
     <!-- An anonymous authentication chain MUST be level 0 -->
@@ -310,11 +324,30 @@
         </params>
       </authMech>
       <authMech>
+        <name>map</name>
+        <required>required</required>
+        <params>
+          <!-- The map parameter can be repeated multiple times with the formation "new_name=pre_mapped_name" -->
+          <param name="map" value="uid=sub" />
+          <param name="map" value="mail=email" />
+        </params>
+      </authMech>
+      <authMech>
+        <name>jit</name>
+        <required>required</required>
+        <params>
+          <!-- The name of the attribute that will be used as the user identifier-->
+          <param name="nameAttr" value="uid" />
+          <!-- The name of the workflow -->
+          <param name="workflowName" value="jitdb" />
+        </params>
+      </authMech>
+      <authMech>
         <name>genoidctoken</name>
         <required>required</required>
         <params>
           <!-- The name of the OpenID Connect identity provider to use -->
-          <param name="idpName" value="oidc" />
+          <param name="idpName" value="OidcIdP" />
           <!-- The name of the trust to generate a session for -->
           <param name="trustName" value="kubernetes" />
         </params>
@@ -358,9 +391,132 @@
     <resultGroup name="oauth2bearer">
       <type>header</type>
       <source>custom</source>
-      <value>com.tremolosecurity.proxy.results.InjectIdToken</value>
+      <value>Authorization=com.tremolosecurity.proxy.results.InjectIdToken</value>
     </resultGroup>
   </resultGroups>
   <keyStorePath>/etc/openunison/unisonKeyStore.jks</keyStorePath>
   <keyStorePassword>#[unisonKeystorePassword]</keyStorePassword>
+  <provisioning>
+    <targets>
+      <target name="jitdb" className="com.tremolosecurity.provisioning.core.providers.BasicDB">
+        <params>
+          <!-- The class of the JDBC driver -->
+          <param name="driver" value="#[OU_JDBC_DRIVER]"/>
+          <!-- The JDBC URL for accessing the database      -->
+          <param name="url" value="#[OU_JDBC_URL]"/>
+          <!-- The user for connecting to the database      -->
+          <param name="user" value="#[OU_JDBC_USER]"/>
+          <!-- The password for the database        -->
+          <param name="password" value="#[OU_JDBC_PASSWORD]"/>
+          <!-- The maximum number of connections to the database    -->
+          <param name="maxCons" value="10"/>
+          <!-- The maximum time a connection can be idle before its closed in milliseconds  -->
+          <param name="maxIdleCons" value="10"/>
+          <!-- A query to run on a connection prior to checkout to make sure it is still active -->
+          <param name="validationQuery" value="#[OU_JDBC_VALIDATION]" />
+          <!-- The name of the table that stores the user objects   -->
+          <param name="userTable" value="localUsers"/>
+          <!-- The name of the column in the user table that is the primary key     -->
+          <param name="userPrimaryKey" value="userId"/>
+          <param name="userName" value="sub"/>
+          <!-- Determines how to manage the relationship between users and groups:
+                                                            None – No group information is stored
+                                                            ManyToMany – Assumes there is a table of users, table of groups and a table that links them
+                                                            OneToMany – Assumes there’s a table of users with a one-to-many relationship with a groups table
+                                                            Custom – Use a custom class to update user attributes and group memberships. See the SDK for implementation details
+                                                        -->
+          <param name="groupMode" value="ManyToMany"/>
+          <!-- The name of the table that stores group information  -->
+          <param name="groupTable" value="localGroups"/>
+          <!-- The field start stores the name of the group -->
+          <param name="groupName" value="name"/>
+          <!-- The name of the column in the link table that maps to the user’s primary key       -->
+          <param name="groupUserKey" value="userId"/>
+          <!-- The name of the table used to link users and groups  -->
+          <param name="groupLinkTableName" value="userGroups"/>
+          <!-- The name of the column in the link table that maps to the group’s primary key      -->
+          <param name="groupGroupKey" value="groupId"/>
+          <!-- The name of the primary key of the group table       -->
+          <param name="groupPrimaryKey" value="groupId"/>
+          <!-- If a custom group management is used this option is used to specify how users are looked up. Use %S to specify the fields being looked up, %I for the user’s numeric ID and %L for the user’s login      -->
+          <param name="userSQL" value=""/>
+          <!-- If a custom group management is used this option is used to specify how groups are looked up. Use %S to specify the fields being looked up, %I for the user’s numeric ID and %L for the user’s login -->
+          <param name="groupSQL" value=""/>
+          <!-- The class name for a custom provider. Must implement com.tremolosecurity.provisioning.core.providers.db.CustomDB -->
+          <param name="customProvider" value=""/>
+        </params>
+        <!-- Attribute mapping -->
+        <targetAttribute name="sub" source="sub" sourceType="user"/>
+        <targetAttribute name="mail" source="mail" sourceType="user"/>
+      </target>
+    </targets>
+    <workflows>
+      <workflow  name="jitdb" label="JIT" description="JIT" inList="false" orgid="687da09f-8ec1-48ac-b035-f2f182b9bd1e">
+        <tasks>
+          <mapping  strict="true">
+            <map>
+              <mapping targetAttributeName="TREMOLO_USER_ID" sourceType="user" targetAttributeSource="uid"/>
+              <mapping targetAttributeName="sub" sourceType="user" targetAttributeSource="uid"/>
+              <mapping targetAttributeName="mail" sourceType="user" targetAttributeSource="mail"/>
+            </map>
+            <onSuccess>
+              <addGroup name="Users" />
+              <customTask className="com.tremolosecurity.provisioning.customTasks.JITBasicDBCreateGroups">
+                <param name="targetName" value="jitdb"/>
+              </customTask>
+              <provision sync="false" target="jitdb" setPassword="false" onlyPassedInAttributes="false" >
+                <attributes>
+                  <value>sub</value>
+                  <value>mail</value>
+                </attributes>
+              </provision>
+              <resync keepExternalAttrs="false" />
+            </onSuccess>
+          </mapping>
+        </tasks>
+      </workflow>
+    </workflows>
+    <approvalDB>
+      <hibernateDialect>#[OU_HIBERNATE_DIALECT]</hibernateDialect>
+      <driver>#[OU_JDBC_DRIVER]</driver>
+      <url>#[OU_JDBC_URL]</url>
+      <user>#[OU_JDBC_USER]</user>
+      <password>#[OU_JDBC_PASSWORD]</password>
+      <maxConns>10</maxConns>
+      <maxIdleConns>10</maxIdleConns>
+      <!-- <hibernateProperty name="hibernate.default_schema" value="public" /> -->
+      <userIdAttribute>uid</userIdAttribute>
+      <approverAttributes>
+        <value>uid</value>
+      </approverAttributes>
+      <userAttributes>
+        <value>uid</value>
+      </userAttributes>
+      <enabled>true</enabled>
+      <smtpHost>#[SMTP_HOST]</smtpHost>
+      <smtpPort>#[SMTP_PORT]</smtpPort>
+      <smtpUser>#[SMTP_USER]</smtpUser>
+      <smtpPassword>#[SMTP_PASSWORD]</smtpPassword>
+      <smtpSubject>Awaiting Approvals</smtpSubject>
+      <smtpFrom>#[SMTP_FROM]</smtpFrom>
+      <smtpTLS>#[SMTP_TLS]</smtpTLS>
+      <encryptionKey>session-unison</encryptionKey>
+      <smtpUseSOCKSProxy>false</smtpUseSOCKSProxy>
+      <smtpSOCKSProxyHost>
+      </smtpSOCKSProxyHost>
+      <smtpSOCKSProxyPort>0</smtpSOCKSProxyPort>
+      <smtpLocalhost>localhost</smtpLocalhost>
+      <validationQuery>#[OU_JDBC_VALIDATION]</validationQuery>
+    </approvalDB>
+    <org name="MyOrg" description="MyOrg Enterprise Applications" uuid="687da09f-8ec1-48ac-b035-f2f182b9bd1e">
+    </org>
+    <queueConfig isUseInternalQueue="true" maxProducers="5"  maxConsumers="5" taskQueueName="TremoloUnisonTaskQueue" smtpQueueName="TremoloUnisonSMTPQueue" encryptionKeyName="session-queues">
+    </queueConfig>
+    <portal>
+    </portal>
+    <scheduler useDB="false" threadCount="3" instanceLabel="testing" instanceIPMask="172"/>
+    <listeners/>
+    <reports>
+    </reports>
+  </provisioning>
   </tremoloConfig>
