@@ -61,22 +61,32 @@
         <url regex="false" authChain="oidc" overrideHost="true" overrideReferer="true">
           <host>#[OU_HOST]</host>
           <filterChain>
+            <filter class="com.tremolosecurity.proxy.filters.RemovePrefix">
+              <param name="prefix" value="/scale-token"/>
+              <param name="attributeName" value="trimmedURI"/>
+            </filter>
+          </filterChain>
+          <uri>/scale</uri>
+          <proxyTo>https://cdn.rawgit.com/TremoloSecurity/OpenUnison/1.0.8/unison/unison-scalejs-main/src/main/html${trimmedURI}</proxyTo>
+          <results>
+            <azSuccess>
+            </azSuccess>
+          </results>
+          <azRules>
+            <rule scope="dn" constraint="o=Tremolo" />
+          </azRules>
+        </url>
+        <url regex="false" authChain="oidc" overrideHost="true" overrideReferer="true">
+          <host>#[OU_HOST]</host>
+          <filterChain>
             <filter class="com.tremolosecurity.scalejs.token.ws.ScaleToken">
-              <!-- The name of the attribute that stores the value to be displayed when referencing the currently logged in user, ie cn or displayName -->
               <param name="displayNameAttribute" value="mail"/>
-              <!-- The title to show on the home page -->
               <param name="frontPage.title" value="Tokens for Kubernetes Kubectl"/>
-              <!-- Sub text for the home page -->
               <param name="frontPage.text" value="Use this token for working with Kubernetes web services"/>
-              <!-- The URL to redirect the user to when they logout -->
               <param name="logoutURL" value="/logout"/>
-              <!-- The URL to access ScaleMain -->
               <param name="homeURL" value="/"/>
-              <!-- When the below number of minutes are left in the user's session, warn the user -->
               <param name="warnMinutesLeft" value="5" />
-              <!-- Implementation of the token loader -->
               <param name="tokenClassName" value="com.tremolosecurity.scalejs.IdTokenLoader"/>
-              <!-- Token specific parameters (see below) -->
               <param name="showTokenURL" value="false"/>
               <param name="idTokenURL" value=""/>
               <param name="showClientSecret" value="true"/>
@@ -92,22 +102,63 @@
             <rule scope="dn" constraint="o=Tremolo" />
           </azRules>
         </url>
+        <url regex="false" authChain="oidc" overrideHost="true" overrideReferer="true">
+          <host>#[OU_HOST]</host>
+          <filterChain>
+            <filter class="com.tremolosecurity.scalejs.ws.ScaleMain">
+              <param name="displayNameAttribute" value="mail"/>
+              <param name="frontPage.title" value="Kubernetes Access Portal"/>
+              <param name="frontPage.text" value="Use this portal to access resources and namespaces in Kubernetes"/>
+              <param name="canEditUser" value="false"/>
+              <param name="workflowName" value=""/>
+              <parma name="warnMinutesLeft" value="5" />
+              <param name="attributeNames" value="uid"/>
+              <param name="uid.displayName" value="Login ID"/>
+              <param name="uid.readOnly" value="true"/>
+              <param name="attributeNames" value="mail"/>
+              <param name="uid.displayName" value="Email Address"/>
+              <param name="uid.readOnly" value="true"/>
+              <param name="uidAttributeName" value="uid"/>
+              <param name="roleAttribute" value=""/>
+              <param name="approvalAttributeNames" value="uid"/>
+              <param name="approvalAttributeNames" value="mail"/>
+              <param name="approvals.uid" value="Login ID"/>
+              <param name="approvals.mail" value="Email Address"/>
+              <param name="showPortalOrgs" value="false"/>
+              <param name="logoutURL" value="/logout"/>
+            </filter>
+          </filterChain>
+          <uri>/scale/main</uri>
+          <results>
+            <azSuccess>
+            </azSuccess>
+          </results>
+          <azRules>
+            <rule scope="dn" constraint="o=Tremolo" />
+          </azRules>
+        </url>
+        <url regex="false" authChain="formloginFilter" overrideHost="true" overrideReferer="true">
+          <host>#[OU_HOST]</host>
+          <filterChain>
+            <filter class="com.tremolosecurity.prelude.filters.StopProcessing" />
+          </filterChain>
+          <uri>/logout</uri>
+          <proxyTo>http://dnm${fullURI}</proxyTo>
+          <results>
+            <azSuccess>Logout</azSuccess>
+          </results>
+          <azRules>
+            <rule scope="dn" constraint="o=Tremolo" />
+          </azRules>
+        </url>
       </urls>
-      <!-- The cookie configuration determines how sessions are managed for this application -->
       <cookieConfig>
-        <!-- The name of the session cookie for this application.  Applications that want SSO between them should have the same cookie name -->
         <sessionCookieName>tremolosession</sessionCookieName>
-        <!-- The domain of component of the cookie -->
         <domain>#[OU_HOST]</domain>
-        <!-- The URL that OpenUnison will interpret as the URL to end the session -->
         <logoutURI>/logout</logoutURI>
-        <!-- The name of the AES-256 key in the keystore to use to encrypt this session -->
         <keyAlias>session-unison</keyAlias>
-        <!-- If set to true, the cookie's secure flag is set to true and the browser will only send this cookie over https connections -->
         <secure>true</secure>
-        <!-- The number of secconds that the session should be allowed to be idle before no longer being valid -->
         <timeout>900</timeout>
-        <!-- required but ignored -->
         <scope>-1</scope>
       </cookieConfig>
     </application>
@@ -129,6 +180,22 @@
             <rule scope="dn" constraint="o=Tremolo" />
           </azRules>
         </url>
+        <url regex="false" authChain="anon" overrideHost="true" overrideReferer="true">
+          <host>#[OU_HOST]</host>
+          <filterChain>
+            <filter class="com.tremolosecurity.proxy.filters.CheckSession">
+              <param name="applicationName" value="k8s"/>
+            </filter>
+          </filterChain>
+          <uri>/scale/sessioncheck</uri>
+          <results>
+            <azSuccess>
+            </azSuccess>
+          </results>
+          <azRules>
+            <rule scope="dn" constraint="o=Tremolo" />
+          </azRules>
+        </url>
       </urls>
       <cookieConfig>
         <sessionCookieName>checksession</sessionCookieName>
@@ -141,18 +208,12 @@
       </cookieConfig>
     </application>
     <application name="OidcIdP" isApp="false">
-      <!-- on a single URL is allowed on an identity provider -->
       <urls>
-        <!-- The regex and authChain attributes are ignored -->
         <url regex="false">
-          <!-- Any number of host tags may be specified to allow for an application to work on multiple hosts.  Additionally an asterick (*) can be specified to make this URL available for ALL hosts -->
           <host>#[OU_HOST]</host>
-          <!-- The filterChain on an IdP is typically used to add attributes to the user prior to mapping into the assertion -->
           <filterChain>
           </filterChain>
-          <!-- The URI MUST start with /auth/idp/ -->
           <uri>/auth/idp/oidc</uri>
-          <!-- List the various results that should happen -->
           <results>
             <auSuccess>
             </auSuccess>
@@ -161,52 +222,23 @@
             </azSuccess>
             <azFail>Default Login Failure</azFail>
           </results>
-          <!-- Determine if the currently logged in user may access the idp.  If ANY rule succeeds, the authorization succeeds.
-                                                                                          The scope may be one of group, dn, filter, dynamicGroup or custom
-                                                                                          The constraint identifies what needs to be satisfied for the authorization to pass and is dependent on the scope:
-                                                                                            * group - The DN of the group in OpenUnison's virtual directory (must be an instance of groupOfUniqueNames)
-                                                                                            * dn - The base DN of the user or users in OpenUnison's virtual directory
-                                                                                            * dynamicGroup - The DN of the dynamic group in OpenUnison's virtual directory (must be an instance of groupOfUrls)
-                                                                                            * custom - An implementation of com.tremolosecurity.proxy.az.CustomAuthorization -->
           <azRules>
             <rule scope="filter" constraint="(objectClass=*)"/>
           </azRules>
-          <!-- Defines the IdP specific portions of the application -->
           <idp className="com.tremolosecurity.idp.providers.OpenIDConnectIdP">
-            <!-- The alias of the TLS key to use for signing JWTs -->
             <params name="jwtSigningKey" value="unison-tls"/>
-            <!-- Database driver -->
             <params name="driver" value="#[OU_JDBC_DRIVER]"/>
-            <!-- JDBC URL -->
             <params name="url" value="#[OU_JDBC_URL]"/>
-            <!-- DB User -->
             <params name="user" value="#[OU_JDBC_USER]"/>
-            <!-- DB Password -->
             <params name="password" value="#[OU_JDBC_PASSWORD]"/>
-            <!-- Maximum number of connections -->
             <params name="maxCons" value="5"/>
-            <!-- Maximum number of connections not actively working -->
             <params name="maxIdleCons" value="5"/>
-            <!-- The HibernateSQL dialect -->
             <params name="dialect" value="#[OU_HIBERNATE_DIALECT]"/>
-            <!-- Validation query to make sure the connection is still available -->
             <params name="validationQuery" value="#[OU_JDBC_VALIDATION]"/>
-            <!-- Determines which attributes to include in the assertion. -->
-            <!-- strict - If true then ONLY attributes specificly named in the mapping will be added -->
             <mappings strict="true">
-              <!-- Each mapping focusses on a single attribute
-                                                                                                                               targetAttributeName - The name of the attribute that will appear in the assertion
-                                                                                                                               sourceType - One of user, static, or composite
-                                                                                                                                * user - The name of an existing attribute on the user's object
-                                                                                                                                * static - A static value that does not change regardless of the user
-                                                                                                                                * composite - A mixture of user and static, allowing for one SAML attribute to be comprised of other attributes and static text.  Attributes are market as "${attributename}"
-                                                                                                                               targetAttributeSource - The value to be used based on the sourceType
-                                                                                                                             -->
               <mapping targetAttributeName="sub" targetAttributeSource="uid" sourceType="user"/>
             </mappings>
-            <!-- Trusts establish a path between the OP and SP/RP -->
             <trusts>
-              <!-- The name of the trust, should be the url of the RP -->
               <trust name="#[K8S_URL]">
                 <param name="clientID" value="kubernetes"/>
                 <param name="clientSecret" value="#[K8S_CLIENT_SECRET]"/>
@@ -221,21 +253,13 @@
           </idp>
         </url>
       </urls>
-      <!-- The cookie configuration determines how sessions are managed for this application -->
       <cookieConfig>
-        <!-- The name of the session cookie for this application.  Applications that want SSO between them should have the same cookie name -->
         <sessionCookieName>tremolosession</sessionCookieName>
-        <!-- The domain of component of the cookie -->
         <domain>#[OU_HOST]</domain>
-        <!-- The URL that OpenUnison will interpret as the URL to end the session -->
         <logoutURI>/logout</logoutURI>
-        <!-- The name of the AES-256 key in the keystore to use to encrypt this session -->
         <keyAlias>session-unison</keyAlias>
-        <!-- If set to true, the cookie's secure flag is set to true and the browser will only send this cookie over https connections -->
         <secure>true</secure>
-        <!-- The number of secconds that the session should be allowed to be idle before no longer being valid -->
         <timeout>900</timeout>
-        <!-- required but ignored -->
         <scope>-1</scope>
       </cookieConfig>
     </application>
@@ -246,9 +270,7 @@
       <uri>/auth/anon</uri>
       <className>com.tremolosecurity.proxy.auth.AnonAuth</className>
       <init>
-        <!-- The RDN of unauthenticated users -->
         <param name="userName" value="uid=Anonymous"/>
-        <!-- Any number of attributes can be added to the anonymous user -->
         <param name="role" value="Users" />
       </init>
       <params>
@@ -292,7 +314,6 @@
     </mechanism>
   </authMechs>
   <authChains>
-    <!-- An anonymous authentication chain MUST be level 0 -->
     <chain name="anon" level="0">
       <authMech>
         <name>anonymous</name>
@@ -327,7 +348,6 @@
         <name>map</name>
         <required>required</required>
         <params>
-          <!-- The map parameter can be repeated multiple times with the formation "new_name=pre_mapped_name" -->
           <param name="map" value="uid=sub" />
           <param name="map" value="mail=email" />
         </params>
@@ -336,9 +356,7 @@
         <name>jit</name>
         <required>required</required>
         <params>
-          <!-- The name of the attribute that will be used as the user identifier-->
           <param name="nameAttr" value="uid" />
-          <!-- The name of the workflow -->
           <param name="workflowName" value="jitdb" />
         </params>
       </authMech>
@@ -346,9 +364,7 @@
         <name>genoidctoken</name>
         <required>required</required>
         <params>
-          <!-- The name of the OpenID Connect identity provider to use -->
           <param name="idpName" value="OidcIdP" />
-          <!-- The name of the trust to generate a session for -->
           <param name="trustName" value="kubernetes" />
         </params>
       </authMech>
@@ -358,11 +374,8 @@
         <name>loginForm</name>
         <required>required</required>
         <params>
-          <!-- Path to the login form -->
           <param name="FORMLOGIN_JSP" value="/auth/forms/defaultForm.jsp"/>
-          <!-- Either an attribute name OR an ldap filter mapping the form parameters. If this is an ldap filter, form parameters are identified by ${parameter} -->
           <param name="uidAttr" value="sub"/>
-          <!-- If true, the user is determined based on an LDAP filter rather than a simple user lookup -->
           <param name="uidIsFilter" value="false"/>
         </params>
       </authMech>
@@ -376,15 +389,10 @@
         <value>/auth/forms/defaultFailedLogin.jsp</value>
       </result>
     </resultGroup>
-    <!-- The name attribute is how the resultGroup is referenced in the URL -->
     <resultGroup name="Logout">
-      <!-- Each result should be listed -->
       <result>
-        <!-- The type of result, one of cookie, header or redirect -->
         <type>redirect</type>
-        <!-- The source of the result value, one of user, static, custom -->
         <source>static</source>
-        <!-- Name of the resuler (in this case a cookie) and the value -->
         <value>/auth/forms/logout.jsp</value>
       </result>
     </resultGroup>
@@ -400,52 +408,27 @@
     <targets>
       <target name="jitdb" className="com.tremolosecurity.provisioning.core.providers.BasicDB">
         <params>
-          <!-- The class of the JDBC driver -->
           <param name="driver" value="#[OU_JDBC_DRIVER]"/>
-          <!-- The JDBC URL for accessing the database      -->
           <param name="url" value="#[OU_JDBC_URL]"/>
-          <!-- The user for connecting to the database      -->
           <param name="user" value="#[OU_JDBC_USER]"/>
-          <!-- The password for the database        -->
           <param name="password" value="#[OU_JDBC_PASSWORD]"/>
-          <!-- The maximum number of connections to the database    -->
           <param name="maxCons" value="10"/>
-          <!-- The maximum time a connection can be idle before its closed in milliseconds  -->
           <param name="maxIdleCons" value="10"/>
-          <!-- A query to run on a connection prior to checkout to make sure it is still active -->
           <param name="validationQuery" value="#[OU_JDBC_VALIDATION]" />
-          <!-- The name of the table that stores the user objects   -->
           <param name="userTable" value="localUsers"/>
-          <!-- The name of the column in the user table that is the primary key     -->
           <param name="userPrimaryKey" value="userId"/>
           <param name="userName" value="sub"/>
-          <!-- Determines how to manage the relationship between users and groups:
-                                                            None – No group information is stored
-                                                            ManyToMany – Assumes there is a table of users, table of groups and a table that links them
-                                                            OneToMany – Assumes there’s a table of users with a one-to-many relationship with a groups table
-                                                            Custom – Use a custom class to update user attributes and group memberships. See the SDK for implementation details
-                                                        -->
           <param name="groupMode" value="ManyToMany"/>
-          <!-- The name of the table that stores group information  -->
           <param name="groupTable" value="localGroups"/>
-          <!-- The field start stores the name of the group -->
           <param name="groupName" value="name"/>
-          <!-- The name of the column in the link table that maps to the user’s primary key       -->
           <param name="groupUserKey" value="userId"/>
-          <!-- The name of the table used to link users and groups  -->
           <param name="groupLinkTableName" value="userGroups"/>
-          <!-- The name of the column in the link table that maps to the group’s primary key      -->
           <param name="groupGroupKey" value="groupId"/>
-          <!-- The name of the primary key of the group table       -->
           <param name="groupPrimaryKey" value="groupId"/>
-          <!-- If a custom group management is used this option is used to specify how users are looked up. Use %S to specify the fields being looked up, %I for the user’s numeric ID and %L for the user’s login      -->
           <param name="userSQL" value=""/>
-          <!-- If a custom group management is used this option is used to specify how groups are looked up. Use %S to specify the fields being looked up, %I for the user’s numeric ID and %L for the user’s login -->
           <param name="groupSQL" value=""/>
-          <!-- The class name for a custom provider. Must implement com.tremolosecurity.provisioning.core.providers.db.CustomDB -->
           <param name="customProvider" value=""/>
         </params>
-        <!-- Attribute mapping -->
         <targetAttribute name="sub" source="sub" sourceType="user"/>
         <targetAttribute name="mail" source="mail" sourceType="user"/>
       </target>
@@ -484,7 +467,6 @@
       <password>#[OU_JDBC_PASSWORD]</password>
       <maxConns>10</maxConns>
       <maxIdleConns>10</maxIdleConns>
-      <!-- <hibernateProperty name="hibernate.default_schema" value="public" /> -->
       <userIdAttribute>uid</userIdAttribute>
       <approverAttributes>
         <value>uid</value>
@@ -519,4 +501,4 @@
     <reports>
     </reports>
   </provisioning>
-  </tremoloConfig>
+</tremoloConfig>
