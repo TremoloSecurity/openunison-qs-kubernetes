@@ -1,8 +1,22 @@
+/*******************************************************************************
+ * Copyright 2016 Tremolo Security, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *******************************************************************************/
 package com.tremolosecurity.unison.k8s.dataobjects;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
+import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.cfgxml.spi.LoadedConfig;
@@ -17,6 +31,7 @@ import com.novell.ldap.LDAPConstraints;
 import com.novell.ldap.LDAPException;
 import com.novell.ldap.LDAPModification;
 import com.novell.ldap.LDAPSearchConstraints;
+import com.tremolosecurity.provisioning.objects.AuditLogType;
 
 import net.sourceforge.myvd.chain.AddInterceptorChain;
 import net.sourceforge.myvd.chain.BindInterceptorChain;
@@ -80,6 +95,30 @@ public class CreateLocalUsers implements Insert {
 		LoadedConfig lc = LoadedConfig.consume(jaxbCfg);
 		StandardServiceRegistry registry = builder.configure(lc).applySettings(config.getProperties()).build();
 		SessionFactory sessionFactory = new MetadataSources( registry ).buildMetadata().buildSessionFactory();
+		
+		Session session = sessionFactory.openSession();
+		
+		List<LocalGroup> groups = session.createCriteria(LocalGroup.class).list();
+		if (groups.size() == 0) {
+			session.beginTransaction();
+			LocalGroup admins = new LocalGroup();
+			admins.setName("Administrators");
+			session.save(admins);
+			
+			LocalGroup sys = new LocalGroup();
+			sys.setName("System");
+			session.save(sys);
+			
+			LocalUser sysUser = new LocalUser();
+			sysUser.setSub("system");
+			sysUser.setMail("");
+			sysUser.setGroups(new ArrayList<LocalGroup>());
+			sysUser.getGroups().add(sys);
+			session.save(sysUser);
+			
+			session.getTransaction().commit();
+		}
+		
 		sessionFactory.close();
 
 	}
