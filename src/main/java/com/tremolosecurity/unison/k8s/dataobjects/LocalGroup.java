@@ -31,10 +31,11 @@ import javax.persistence.JoinColumn;
 public class LocalGroup {
 	int groupId;
 	String name;
+	String description;
 	List<LocalUser> users;
-	
+
 	public LocalGroup() {
-		
+
 	}
 
 	@Id
@@ -57,6 +58,15 @@ public class LocalGroup {
 		this.name = name;
 	}
 
+	@Column(name = "description", nullable = true,columnDefinition = "TEXT")
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
 	@ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	@JoinTable(name = "userGroups",  joinColumns = {
 			@JoinColumn(name = "groupId", nullable = false, updatable = false) },
@@ -69,6 +79,6 @@ public class LocalGroup {
 	public void setUsers(List<LocalUser> users) {
 		this.users = users;
 	}
-	
-	
+
+
 }

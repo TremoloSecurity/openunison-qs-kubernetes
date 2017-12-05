@@ -14,4 +14,5 @@ com.tremolosecurity.openunison.externalOpenPort=80
 com.tremolosecurity.openunison.externalSecurePort=443
 
 #Uncomment and set for production deployments
-#com.tremolosecurity.openunison.activemqdir=/var/lib/unison-activemq
+com.tremolosecurity.openunison.activemqdir=/tmp/unison-activemq
+com.tremolosecurity.openunison.quartzdir=/tmp/quartz

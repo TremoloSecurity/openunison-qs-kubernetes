@@ -32,10 +32,13 @@ public class LocalUser {
 	int userId;
 	String sub;
 	String mail;
-	List<LocalGroup> groups;
+	String firstName;
+	String lastName;
 	
+	List<LocalGroup> groups;
+
 	public LocalUser() {
-		
+
 	}
 
 	@Id
@@ -79,7 +82,26 @@ public class LocalUser {
 	public void setMail(String mail) {
 		this.mail = mail;
 	}
+
+	@Column(name="firstName",nullable=true)
+	public String getFirstName() {
+		return firstName;
+	}
+
+	public void setFirstName(String firstName) {
+		this.firstName = firstName;
+	}
+
+	@Column(name="lastName",nullable=true)
+	public String getLastName() {
+		return lastName;
+	}
+
+	public void setLastName(String lastName) {
+		this.lastName = lastName;
+	}
+
 	
-	
-	
+
+
 }

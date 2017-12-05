@@ -2,14 +2,18 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.openunison</groupId>
-  <artifactId>openunison-qs-kubernetes</artifactId>
+  <artifactId>openunison-openshift-idm</artifactId>
   <packaging>war</packaging>
-  <version>1.0.0</version>
-  <name>openunison-qs-kubernetes</name>
+  <version>1.0.12</version>
+  <name>openunison-openshift-idm</name>
   <url>http://openunison.io</url>
   <repositories>
     <repository>
-      <id>Tremolo Security</id>
+      <id>Tremolo Security Betas</id>
+      <url>https://www.tremolosecurity.com/nexus/content/repositories/betas/</url>
+    </repository>
+    <repository>
+      <id>Tremolo Security Releases</id>
       <url>https://www.tremolosecurity.com/nexus/content/repositories/releases/</url>
     </repository>
   </repositories>
@@ -17,25 +21,25 @@
     <dependency>
       <groupId>com.tremolosecurity.unison</groupId>
       <artifactId>open-unison-webapp</artifactId>
-      <version>1.0.8</version>
+      <version>1.0.12</version>
       <type>war</type>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>com.tremolosecurity.unison</groupId>
       <artifactId>open-unison-webapp</artifactId>
-      <version>1.0.8</version>
+      <version>1.0.12</version>
       <type>pom</type>
-    </dependency>
-    <dependency>
-      <groupId>com.tremolosecurity.unison</groupId>
-      <artifactId>unison-auth-openidconnect</artifactId>
-      <version>1.0.8</version>
     </dependency>
     <dependency>
       <groupId>mysql</groupId>
       <artifactId>mysql-connector-java</artifactId>
-      <version>5.1.40</version>
+      <version>5.1.42</version>
+    </dependency>
+    <dependency>
+      <groupId>com.tremolosecurity.unison</groupId>
+      <artifactId>openunison-on-undertow</artifactId>
+      <version>1.0.12</version>
     </dependency>
   </dependencies>
   <build>

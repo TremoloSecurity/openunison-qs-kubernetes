@@ -58,7 +58,7 @@ import net.sourceforge.myvd.types.Results;
 public class CreateLocalUsers implements Insert {
 
 	String name;
-	
+
 	@Override
 	public String getName() {
 		return name;
@@ -67,7 +67,7 @@ public class CreateLocalUsers implements Insert {
 	@Override
 	public void configure(String name, Properties props, NameSpace nameSpace) throws LDAPException {
 		StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder();
-		
+
 		Configuration config = new Configuration();
 		config.setProperty("hibernate.connection.driver_class", props.getProperty("driver"));
 		config.setProperty("hibernate.connection.password", props.getProperty("password"));
@@ -77,48 +77,60 @@ public class CreateLocalUsers implements Insert {
 		config.setProperty("hibernate.hbm2ddl.auto", "update");
 		config.setProperty("show_sql", "true");
 		config.setProperty("hibernate.current_session_context_class", "thread");
-		
+
 		config.setProperty("hibernate.c3p0.max_size", Integer.toString(10));
 		config.setProperty("hibernate.c3p0.maxIdleTimeExcessConnections", Integer.toString(10));
-		
+
 		JaxbCfgHibernateConfiguration jaxbCfg = new JaxbCfgHibernateConfiguration();
 		jaxbCfg.setSessionFactory(new JaxbCfgSessionFactory());
-		
+
 		JaxbCfgMappingReferenceType mrt = new JaxbCfgMappingReferenceType();
 		mrt.setClazz(LocalUser.class.getName());
 		jaxbCfg.getSessionFactory().getMapping().add(mrt);
-		
+
 		mrt = new JaxbCfgMappingReferenceType();
 		mrt.setClazz(LocalGroup.class.getName());
 		jaxbCfg.getSessionFactory().getMapping().add(mrt);
-		
+
 		LoadedConfig lc = LoadedConfig.consume(jaxbCfg);
 		StandardServiceRegistry registry = builder.configure(lc).applySettings(config.getProperties()).build();
 		SessionFactory sessionFactory = new MetadataSources( registry ).buildMetadata().buildSessionFactory();
-		
+
 		Session session = sessionFactory.openSession();
-		
+
 		List<LocalGroup> groups = session.createCriteria(LocalGroup.class).list();
 		if (groups.size() == 0) {
 			session.beginTransaction();
 			LocalGroup admins = new LocalGroup();
-			admins.setName("Administrators");
+			admins.setName("administrators");
+			admins.setDescription("System administrators with approval access for new projects and new cluster admins");
 			session.save(admins);
-			
+
+			LocalGroup k8sAdmins = new LocalGroup();
+			k8sAdmins.setName("k8s-cluster-administrators");
+			k8sAdmins.setDescription("Kubernetes cluster administrators");
+			session.save(k8sAdmins);
+
 			LocalGroup sys = new LocalGroup();
 			sys.setName("System");
+			sys.setDescription("System level groups not assigned to local users");
 			session.save(sys);
-			
+
+			LocalGroup users = new LocalGroup();
+			users.setName("users");
+			users.setDescription("All users are members");
+			session.save(users);
+
 			LocalUser sysUser = new LocalUser();
 			sysUser.setSub("system");
 			sysUser.setMail("");
 			sysUser.setGroups(new ArrayList<LocalGroup>());
 			sysUser.getGroups().add(sys);
 			session.save(sysUser);
-			
+
 			session.getTransaction().commit();
 		}
-		
+
 		sessionFactory.close();
 
 	}
@@ -204,7 +216,7 @@ public class CreateLocalUsers implements Insert {
 
 	@Override
 	public void shutdown() {
-		
+
 
 	}
 
