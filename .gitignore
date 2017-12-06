@@ -8,6 +8,8 @@ dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
 .classpath
+.gitignore
 .project
 .settings/
 .tern-project
+.DS_Store
