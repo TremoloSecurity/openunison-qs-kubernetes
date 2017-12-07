@@ -32,6 +32,8 @@ spec:
           exec:
             command:
             - "/usr/local/openunison/bin/check_alive.py"
+            - "https://127.0.0.1:8443/auth/idp/k8sIdp/.well-known/openid-configuration"
+            - "issuer"
           initialDelaySeconds: 30
           timeoutSeconds: 10
         ports:
