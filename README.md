@@ -1,5 +1,9 @@
 # Kubernetes Identity Manager
 
+[![Alt text](http://i.vimeocdn.com/video/671443572_640.jpg)](https://vimeo.com/246464075)
+
+*Short video of logging into Kubernetes and using kubectl using ADFS*
+
 This quick start for OpenUnison is designed to provide an identity management hub for Kubernetes that will:
 
 1. Provide an OpenID Connect Bridge for SAML2, multiple LDAP directories, add compliance acknowledgment, etc
