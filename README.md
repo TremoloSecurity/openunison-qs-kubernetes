@@ -74,6 +74,7 @@ $ keytool -import -trustcacerts -alias idp-saml2-sig -rfc -storetype JCEKS -keys
 Import the trusted certificate for Kubernetes by looking for the certificate the master (Kubernetes API) server runs under.  This will depend on how you deployed Kubernetes.  For instance for kubeadm import the certificate from `/etc/kubernetes/pki/ca.crt`:
 ```bash
 $ keytool -import -trustcacerts -alias k8s-master -rfc -storetype JCEKS -keystore ./unisonKeyStore.jks -file /path/to/ca.crt
+```
 
 Finally, import the certificate for the dashboard:
 ```bash
