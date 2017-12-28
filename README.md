@@ -73,7 +73,11 @@ $ keytool -import -trustcacerts -alias idp-saml2-sig -rfc -storetype JCEKS -keys
 
 Import the trusted certificate for Kubernetes by looking for the certificate the master (Kubernetes API) server runs under.  This will depend on how you deployed Kubernetes.  For instance for kubeadm import the certificate from `/etc/kubernetes/pki/ca.crt`:
 ```bash
-$ keytool -import -trustcacerts -alias openshift-master -rfc -storetype JCEKS -keystore ./unisonKeyStore.jks -file /path/to/ca.crt
+$ keytool -import -trustcacerts -alias k8s-master -rfc -storetype JCEKS -keystore ./unisonKeyStore.jks -file /path/to/ca.crt
+
+Finally, import the certificate for the dashboard:
+```bash
+$ keytool -import -trustcacerts -alias dashboard -rfc -storetype JCEKS -keystore ./unisonKeyStore.jks -file /path/to/dashboard.crt
 ```  
 
 
@@ -82,12 +86,13 @@ $ keytool -import -trustcacerts -alias openshift-master -rfc -storetype JCEKS -k
 The easiest way to create this account is to login to the OpenShift master to run oadm and oc (these instructions from OpenUnison's product manual):
 
 ```bash
-$ kubectl create serviceaccount openunison
-$ kubectl describe serviceaccount openunison
-$ kubectl describe secret openunison-token-xxxx
+$ kubectl create namespace openunison
+$ kubectl create serviceaccount openunison -n openunison
+$ kubectl describe serviceaccount openunison -n openunison
+$ kubectl describe secret openunison-token-xxxx -n openunison
 ```
 
-In the above example, XXXX is the id of one of the tokens generated in the `Tokens` section of the output from the `kubectl describe serviceaccount openunison`.  The final command will output a large, base64 encoded token.  This token is what OpenUnison will use to communicate with Kubernetes.  Hold on to this value for the next step.
+In the above example, XXXX is the id of one of the tokens generated in the `Tokens` section of the output from the `kubectl describe serviceaccount openunison -n openunison`.  The final command will output a large, base64 encoded token.  This token is what OpenUnison will use to communicate with Kubernetes.  Hold on to this value for the next step.
 
 ## Create Roles and RoleBindings
 
@@ -105,7 +110,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 - kind: ServiceAccount
   name: openunison
-  namespace: default
+  namespace: openunison
 roleRef:
   kind: ClusterRole
   name: cluster-admin
@@ -186,7 +191,7 @@ A few notes about the above properties:
 Once your environment file is built, metadata can be generated for your identity provider.  First download the OpenUnion utilities jar file from `https://www.tremolosecurity.com/nexus/service/local/repositories/betas/content/com/tremolosecurity/unison/openunison-util/1.0.12.beta/openunison-util-1.0.12.beta-jar-with-dependencies.jar` and run the export:
 
 ```bash
-$ java -jar ./openunison-util-1.0.12.beta.jar -action export-sp-metadata -chainName enterprise_idp -unisonXMLFile /path/to/openunison-qs-openshift/src/main/webapp/WEB-INF/unison.xml -keystorePath ./unisonKeyStore.jks -envFile ./ou.env -mechanismName SAML2 -urlBase https://openunison.demo.aws
+$ java -jar ./openunison-util-1.0.12.beta.jar -action export-sp-metadata -chainName enterprise_idp -unisonXMLFile /path/to/openunison-qs-kubernetes/src/main/webapp/WEB-INF/unison.xml -keystorePath ./unisonKeyStore.jks -envFile ./ou.env -mechanismName SAML2 -urlBase https://openunison.demo.aws
 ```
 
 Make sure to replace the `-urlBase` with the URL user for accessing OpenUnison.  It should use the same host as in OU_HOST.  This command will generate XML to the console that can be copied&pasted into a file that can be submited to your identity provider.
