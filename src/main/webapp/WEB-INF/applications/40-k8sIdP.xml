@@ -3,6 +3,7 @@
         <urls>
             <url regex="false">
                 <host>#[OU_HOST]</host>
+                    <host>127.0.0.1</host>
                 <filterChain/>
                 <uri>/auth/idp/k8sIdp</uri>
                 <results>
