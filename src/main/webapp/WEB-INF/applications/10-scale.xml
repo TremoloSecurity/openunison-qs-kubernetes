@@ -255,9 +255,9 @@
                   <param name="tokenClassName" value="com.tremolosecurity.scalejs.KubectlTokenLoader"/>
                   <param name="uidAttributeName" value="uid"/>
                   <param name="kubectlUsage" value="Run this command to use your local kubectl" />
-                  <param name="k8sMasterCaCertificateURL" value="https://openunison.tremololocal.lan/k8s.pem"/>
-                  <param name="caCertificateURL" value="https://openunison.tremololocal.lan/openunison.pem"/>
-                  <param name="kubectlTemplate" value="kubectl config set-cluster kubernetes --server=#[K8S_URL] --certificate-authority=#[K8S_CA_LOCAL_PATH] &amp;&amp; kubectl config set-context kubernetes --cluster=kubernetes --user=$user_id$ &amp;&amp; kubectl config set-credentials $user_id$  --auth-provider=oidc --auth-provider-arg=idp-issuer-url=$token.claims.issuer$ --auth-provider-arg=client-id=$token.trustName$ --auth-provider-arg=refresh-token=$token.refreshToken$ --auth-provider-arg=idp-certificate-authority=/home/mlb/projects/k8s/ssl/ca.pem --auth-provider-arg=id-token=$token.encodedIdJSON$ &amp;&amp; kubectl config use-context kubernetes" />
+                  <param name="k8sMasterCaCertificateURL" value="#[K8S_CA_DOWNLOAD_URL]"/>
+                  <param name="caCertificateURL" value="#[OU_CA_DOWNLOAD_URL]"/>
+                  <param name="kubectlTemplate" value="kubectl config set-cluster kubernetes --server=#[K8S_URL] --certificate-authority=#[K8S_CA_LOCAL_PATH] &amp;&amp; kubectl config set-context kubernetes --cluster=kubernetes --user=$user_id$ &amp;&amp; kubectl config set-credentials $user_id$  --auth-provider=oidc --auth-provider-arg=idp-issuer-url=$token.claims.issuer$ --auth-provider-arg=client-id=$token.trustName$ --auth-provider-arg=refresh-token=$token.refreshToken$ --auth-provider-arg=idp-certificate-authority=#[OU_CA_LOCAL_PATH] --auth-provider-arg=id-token=$token.encodedIdJSON$ &amp;&amp; kubectl config use-context kubernetes" />
                 </filter>
                 </filterChain>
                 <uri>/k8stoken/token</uri>
