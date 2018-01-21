@@ -52,7 +52,9 @@ $ sh makessl.sh
 $ cd ssl
 $ openssl pkcs12 -export -chain -inkey key.pem -in cert.pem -CAfile ca.pem -out openunison.p12
 $ cd ..
+$ keytool -import -keystore ./unisonKeyStore.jks -storeType JCEKS -rfc -alias unison-ca -file ssl/ca.pem
 $ keytool -importkeystore -srckeystore ./ssl/openunison.p12 -srcstoretype PKCS12 -alias 1 -destKeystore ./unisonKeyStore.jks -deststoretype JCEKS -destalias unison-tls
+
 ```
 
 ```bash
