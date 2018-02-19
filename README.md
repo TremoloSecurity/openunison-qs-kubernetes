@@ -63,14 +63,9 @@ $ keytool -genseckey -alias lastmile-oidc -keyalg AES -keysize 256 -storetype JC
 
 ```
 
-Then the SAML2 RP certificate
+Import the Active Directory certificate for LDAPS
 ```bash
-$ keytool -genkeypair -storetype JCEKS -alias unison-saml2-rp-sig -keyalg RSA -keysize 2048 -sigalg SHA256withRSA -keystore  ./unisonKeyStore.jks -validity 3650
-```
-
-Import the SAML2 signing certificate from your identity provider
-```bash
-$ keytool -import -trustcacerts -alias idp-saml2-sig -rfc -storetype JCEKS -keystore ./unisonKeyStore.jks -file /path/to/certificate.pem
+$ keytool -import -trustcacerts -alias trusted-adldaps -rfc -storetype JCEKS -keystore ./unisonKeyStore.jks -file /path/to/ad-ldaps.pem
 ```
 
 Import the trusted certificate for Kubernetes by looking for the certificate the master (Kubernetes API) server runs under.  This will depend on how you deployed Kubernetes.  For instance for kubeadm import the certificate from `/etc/kubernetes/pki/ca.crt`:
@@ -173,49 +168,25 @@ OU_JDBC_VALIDATION=SELECT 1
 K8S_URL=https://kubernetes.default.svc:6443
 K8S_TOKEN=eyJhbGciOiJS...
 unisonKeystorePassword=start123
-IDP_POST=https://adfs.ent2k16.domain.com/adfs/ls/
-IDP_REDIR=https://adfs.ent2k16.domain.com/adfs/ls/
-IDP_LOGOUT=https://adfs.ent2k16.domain.com/adfs/ls/
-IDP_ENTITY_ID=http://adfs.ent2k16.domain.com/adfs/services/trust
 K8S_DASHBOARD_URL=https://192.168.56.100:30443
 K8S_DASHBOARD_HOST=k8sdb.tslocal.lan
 K8S_DHASBOARD_LINK=https://k8sdb.tslocal.lan/
 OU_COOKIE_DOMAIN=tslocal.lan
+AD_BASE_DN=cn=users,dc=ent2k16,dc=domain,dc=com
+AD_HOST=192.168.56.25
+AD_PORT=636
+AD_BIND_DN=cn=Administrator,cn=users,dc=ent2k16,dc=domain,dc=com
+AD_BIND_PASSWORD=XXXXX
+AD_CON_TYPE=ldaps
+SRV_DNS=false
 ```
 
 A few notes about the above properties:
 
 1. The Kubernetes dashboard needs its own host name, seperate from OpenUnison.  This DNS name should point to OpenUnison (or the load balancer in front of OpenUnison)
-2.  Include the token you generated earlier for the openunison service account
+2. Include the token you generated earlier for the openunison service account
+3. If your Kubernetes master is using Active Directory's DNS, you can set `SRV_DNS` to `true` and change the host to the name of your domain 
 
-
-## Export SAML2 Metadata
-
-Once your environment file is built, metadata can be generated for your identity provider.  First download the OpenUnion utilities jar file from `https://www.tremolosecurity.com/nexus/service/local/repositories/betas/content/com/tremolosecurity/unison/openunison-util/1.0.12.beta/openunison-util-1.0.12.beta-jar-with-dependencies.jar` and run the export:
-
-```bash
-$ java -jar ./openunison-util-1.0.12.beta.jar -action export-sp-metadata -chainName enterprise_idp -unisonXMLFile /path/to/openunison-qs-kubernetes/src/main/webapp/WEB-INF/unison.xml -keystorePath ./unisonKeyStore.jks -envFile ./ou.env -mechanismName SAML2 -urlBase https://openunison.demo.aws
-```
-
-Make sure to replace the `-urlBase` with the URL user for accessing OpenUnison.  It should use the same host as in OU_HOST.  This command will generate XML to the console that can be copied&pasted into a file that can be submited to your identity provider.
-
-
-### Configure Identity Provider
-
-Once the OpenUnison metadata is imported, make sure the following attributes are in the assertion:
-
-| Attribute Name | Active Directory Attribute | Description |
-| -------------- | -------------------------- | ----------- |
-| uid            | samAccountName             | User's login id |
-| givenName      | givenName                  | User's first name |
-| sn             | sn                         | User's last name |
-| mail           | mail                       | User's email address |
-
-If using Active Directory Federation Services, you can use the following claims transformation rule:
-```
-c:[Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/windowsaccountname", Issuer == "AD AUTHORITY"]
- => issue(store = "Active Directory", types = ("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier", "uid", "givenName", "sn", "mail"), query = ";sAMAccountName,sAMAccountName,givenName,sn,mail;{0}", param = c.Value);
-```
 
 ## Create OpenUnison YAML
 
