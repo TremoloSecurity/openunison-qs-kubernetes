@@ -63,6 +63,12 @@ $ keytool -genseckey -alias lastmile-oidc -keyalg AES -keysize 256 -storetype JC
 
 ```
 
+Then the OpenID Connect IdP certificate
+```bash
+$ keytool -genkeypair -storetype JCEKS -alias unison-saml2-rp-sig -keyalg RSA -keysize 2048 -sigalg SHA256withRSA -keystore  ./unisonKeyStore.jks -validity 3650
+```
+
+
 Import the Active Directory certificate for LDAPS
 ```bash
 $ keytool -import -trustcacerts -alias trusted-adldaps -rfc -storetype JCEKS -keystore ./unisonKeyStore.jks -file /path/to/ad-ldaps.pem
@@ -81,7 +87,7 @@ $ keytool -import -trustcacerts -alias dashboard -rfc -storetype JCEKS -keystore
 
 ## Create Kubernetes Service Account
 
-The easiest way to create this account is to login to the OpenShift master to run oadm and oc (these instructions from OpenUnison's product manual):
+The easiest way to create this account is to login to the Kubernetes master to run oadm and oc (these instructions from OpenUnison's product manual):
 
 ```bash
 $ kubectl create namespace openunison
