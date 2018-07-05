@@ -6,7 +6,7 @@
       <filterChain>
         <filter class="com.tremolosecurity.prelude.filters.CompleteLogin" />
       </filterChain>
-      <uri>/login/saml</uri>
+      <uri>/login/ldap</uri>
       <results>
         <auFail>Default Login Failure</auFail>
         <azFail>Default Login Failure</azFail>
