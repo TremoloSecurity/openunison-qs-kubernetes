@@ -19,7 +19,7 @@
       <param name="spEncKey" value="" />
       <param name="forceToSSL" value="false" />
       <param name="dontLinkToLDAP" value="true" />
-      <param name="logoutURL" value="https://#[OU_HOST]/auth/forms/logout.jsp" />
+      <param name="logoutURL" value="/auth/forms/logout.jsp" />
       <param name="entityID" value="#[IDP_ENTITY_ID]" />
       <param name="idpRedirLogoutURL" value="#[IDP_LOGOUT]"/>
     </params>
