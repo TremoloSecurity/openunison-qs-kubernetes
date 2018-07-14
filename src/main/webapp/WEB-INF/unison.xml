@@ -13,7 +13,7 @@
   <resultGroups>
     @[dir:result_groups]
   </resultGroups>
-  <keyStorePath>/etc/openunison/unisonKeyStore.jks</keyStorePath>
+  <keyStorePath>/etc/openunison/unisonKeyStore.p12</keyStorePath>
   <keyStorePassword>#[unisonKeystorePassword]</keyStorePassword>
   <provisioning>
     <targets>
