@@ -2,10 +2,10 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.openunison</groupId>
-  <artifactId>openunison-openshift-idm</artifactId>
+  <artifactId>openunison-k8s-activedirectory</artifactId>
   <packaging>war</packaging>
-  <version>1.0.14.1</version>
-  <name>openunison-openshift-idm</name>
+  <version>1.0.15</version>
+  <name>openunison-k8s-activedirectory</name>
   <url>http://openunison.io</url>
   <repositories>
     <repository>
@@ -17,23 +17,31 @@
       <url>https://www.tremolosecurity.com/nexus/content/repositories/releases/</url>
     </repository>
   </repositories>
+  <distributionManagement>
+		<repository>
+			<id>deployment</id>
+			<name>Tremolo Security Releases</name>
+			<url>https://www.tremolosecurity.com/nexus/content/repositories/releases</url>
+		</repository>
+
+	</distributionManagement>
   <dependencies>
     <dependency>
       <groupId>com.tremolosecurity.unison</groupId>
       <artifactId>openunison-on-undertow</artifactId>
-      <version>1.0.14.1</version>
+      <version>1.0.15</version>
     </dependency>
     <dependency>
       <groupId>com.tremolosecurity.unison</groupId>
       <artifactId>open-unison-webapp</artifactId>
-      <version>1.0.14.1</version>
+      <version>1.0.15</version>
       <type>war</type>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>com.tremolosecurity.unison</groupId>
       <artifactId>open-unison-webapp</artifactId>
-      <version>1.0.14.1</version>
+      <version>1.0.15</version>
       <type>pom</type>
     </dependency>
     <dependency>
@@ -44,7 +52,7 @@
     <dependency>
       <groupId>com.tremolosecurity.unison</groupId>
       <artifactId>openunison-on-undertow</artifactId>
-      <version>1.0.14.1</version>
+      <version>1.0.15</version>
     </dependency>
   </dependencies>
   <build>
