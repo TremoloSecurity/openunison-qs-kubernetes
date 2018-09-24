@@ -71,6 +71,7 @@ print("Retrieving certificate from API server");
 apiResp = k8s.callWS('/apis/certificates.k8s.io/v1beta1/certificatesigningrequests/openunison.openunison.svc.cluster.local');
 certResp = JSON.parse(apiResp.data);
 b64cert = certResp.status.certificate;
+print(b64cert);
 CertUtils.importSignedCert(x509data,b64cert);
 
 print("Saving certificate to keystore");
