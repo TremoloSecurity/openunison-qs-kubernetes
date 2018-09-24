@@ -319,6 +319,13 @@ k8s.postWS('/api/v1/namespaces/openunison/secrets',JSON.stringify(ouSecrets));
 
 print("Creating post deployment conigmap");
 
+oidcFlags = "--oidc-issuer-url=https://" + inProp["OU_HOST"] + "/auth/idp/k8sIdp\n" +
+            "--oidc-client-id=kubernetes\n" +
+            "--oidc-username-claim=sub\n" + 
+            "--oidc-groups-claim=groups\n" +
+            "--oidc-ca-file=/etc/kubernetes/pki/ou-ca.pem";
+
+
 cfgMap = {
     "apiVersion":"v1",
     "kind":"ConfigMap",
@@ -327,16 +334,14 @@ cfgMap = {
         "namespace":"openunison"
     },
     "data":{
-        "oidc-issuer":"--oidc-issuer-url=https://" + inProp["OU_HOST"] + "/auth/idp/k8sIdp",
-        "oidc-client-id":"--oidc-client-id=kubernetes",
-        "oidc-username-sub":"--oidc-username-claim=sub",
-        "oidc-groups-claims":"--oidc-groups-claim=groups",
-        "oidc-ca-file":"--oidc-ca-file=/etc/kubernetes/pki/ou-ca.pem",
-        //"ou-ca.pem-base64-encoded":java.util.Base64.getEncoder().encodeToString(CertUtils.exportCert(ingressX509data.getCertificate()).getBytes("UTF-8"))
+        "oidc-api-server-flags":oidcFlags,
         "ou-ca.pem-base64-encoded":CertUtils.exportCert(ingressX509data.getCertificate())
     }
 };
 
 k8s.postWS('/api/v1/namespaces/openunison/configmaps',JSON.stringify(cfgMap));
+
+print("Deleting cluster role binding");
+k8s.deleteWS('/apis/rbac.authorization.k8s.io/v1/clusterrolebindings/artifact-deployment');
 
 print("Artifacts Created, to configure the API server run 'kubectl describe configmap api-server-config -n openunison'");
