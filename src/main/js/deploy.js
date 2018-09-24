@@ -56,6 +56,10 @@ csrReq = {
 
 print("Requesting certificate");
 apiResp = k8s.postWS('/apis/certificates.k8s.io/v1beta1/certificatesigningrequests',JSON.stringify(csrReq));
+
+print("request code : " + apiResp.code);
+print("request json : " + apiResp.data);
+
 print("Approving certificate");
 approveReq = JSON.parse(apiResp.data);
 approveReq.status.conditions = [
