@@ -344,7 +344,8 @@ cfgMap = {
     },
     "data":{
         "oidc-api-server-flags":oidcFlags,
-        "ou-ca.pem-base64-encoded":CertUtils.exportCert(ingressX509data.getCertificate())
+        "ou-ca.pem-base64-encoded":CertUtils.exportCert(ingressX509data.getCertificate()),
+        "deployment":java.util.Base64.getEncoder().encodeToString(k8s.processTemplate(deploymentTemplate,inProp).getBytes("UTF-8"))
     }
 };
 
