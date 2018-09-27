@@ -6,15 +6,18 @@
 
 This quick start for OpenUnison is designed to provide an identity management hub for Kubernetes that will:
 
-1. Provide an OpenID Connect Bridge for SAML2, multiple LDAP directories, add compliance acknowledgment, etc
-2. Self service portal for requesting access to and getting approval for individual projects
+1. Support authentication with Active Directory for both `kubectl` and the dashboard (https://github.com/kubernetes/dashboard)
+2. Automated creation of Namespaces
+2. Self service portal for requesting access to and getting approval for individual namespaces
 3. Self service requests for gaining cluster level roles
 4. Support removing users' access
 5. Reporting
 
-The quick start can run inside of Kubernetes, leveraging Kubernetes for scalability and secret management.  It can also be run externally to Kubernetes.  This guide assumes you intend to run OpenUnison inside of Kubernetes.
+The quick start is designed to run inside of Kubernetes, leveraging Kubernetes for scalability and secret management and deployment. 
 
 ![Kubernetes Identity Manager Architecture](imgs/openunison_qs_kubernetes.png)
+
+When a user accesses Kubernetes using OpenUnison, they'll access both te self service portal and the dashboard through OpenUnison (instead of directly via an ingress).  OpenUnison will inject the user's identity into each request, allowing the dashboard to act on their behalf.
 
 The OpenUnison deployment stores all Kubernetes access information as a groups inside of a relational database, as opposed to a group in an external directory.  OpenUnison will create the approprioate Roles and RoleBindings to allow for the access.
 
@@ -36,209 +39,130 @@ The OpenUnison deployment stores all Kubernetes access information as a groups i
 
 # Deployment
 
-The deployment model assumes:
-1. Kubernetes 1.8 or higher (tested with "stock" Kubernetes, but should work with any Kubernetes distribution)
-2. An image repository
-3. Access to a certified RDBMS (may run on Kubernetes)
+## What You Need To Start
 
-These instructions cover using the Source-to-Image created by Tremolo Security for OpenUnison, but can be deployed into any J2EE container like tomcat, wildfly, etc.  The Source-to-Image builder will build a container image from your unison.xml and myvd.props file that has all of your libraries running on Undertow.io on the latest CentOS.  The keystore required for deployment will be stored as a secret in Kubernetes.
+Prior to deploying OpenUnison you will need:
 
-## Generating Keystore
-
-OpenUnison encrypts or signs everything that leaves it such as JWTs, workflow requests, session cookies, etc. To do this, we need to create a Java keystore that can be used to store these keys as well as the certificates used for TLS by Undertow. When working with Kubernetes something to take note of is Go does NOT work with self signed certificates that are not marked as CA:TRUE no matter how many ways you trust it. In order to use a self signed certificate you have to create a self signed certificate authority and THEN create a certificate signed by that CA. This can be done using Java's keytool but OpenSSL's approach is easier. To make this easier, the makecerts.sh script in this repository (`src/main/bash/makessl.sh`) (adapted from a similar script from CoreOS) will do this for you. Just make sure to change the subject in the script first:
-
-```bash
-$ sh makessl.sh
-$ cd ssl
-$ openssl pkcs12 -export -chain -inkey key.pem -in cert.pem -CAfile ca.pem -out openunison.p12
-$ cd ..
-$ keytool -import -keystore ./unisonKeyStore.jks -storeType JCEKS -rfc -alias unison-ca -file ssl/ca.pem
-$ keytool -importkeystore -srckeystore ./ssl/openunison.p12 -srcstoretype PKCS12 -alias 1 -destKeystore ./unisonKeyStore.jks -deststoretype JCEKS -destalias unison-tls
-
-```
-
-```bash
-$ keytool -genseckey -alias session-unison -keyalg AES -keysize 256 -storetype JCEKS -keystore ./unisonKeyStore.jks
-$ keytool -genseckey -alias lastmile-oidc -keyalg AES -keysize 256 -storetype JCEKS -keystore ./unisonKeyStore.jks
-
-```
-
-Then the OpenID Connect IdP certificate
-```bash
-$ keytool -genkeypair -storetype JCEKS -alias unison-saml2-rp-sig -keyalg RSA -keysize 2048 -sigalg SHA256withRSA -keystore  ./unisonKeyStore.jks -validity 3650
-```
-
-
-Import the Active Directory certificate for LDAPS
-```bash
-$ keytool -import -trustcacerts -alias trusted-adldaps -rfc -storetype JCEKS -keystore ./unisonKeyStore.jks -file /path/to/ad-ldaps.pem
-```
-
-Import the trusted certificate for Kubernetes by looking for the certificate the master (Kubernetes API) server runs under.  This will depend on how you deployed Kubernetes.  For instance for kubeadm import the certificate from `/etc/kubernetes/pki/ca.crt`:
-```bash
-$ keytool -import -trustcacerts -alias k8s-master -rfc -storetype JCEKS -keystore ./unisonKeyStore.jks -file /path/to/ca.crt
-```
-
-Finally, import the certificate for the dashboard:
-```bash
-$ keytool -import -trustcacerts -alias dashboard -rfc -storetype JCEKS -keystore ./unisonKeyStore.jks -file /path/to/dashboard.crt
-```  
-
-
-## Create Kubernetes Service Account
-
-The easiest way to create this account is to login to the Kubernetes master to run oadm and oc (these instructions from OpenUnison's product manual):
-
-```bash
-$ kubectl create namespace openunison
-$ kubectl create serviceaccount openunison -n openunison
-$ kubectl describe serviceaccount openunison -n openunison
-$ kubectl describe secret openunison-token-xxxx -n openunison
-```
-
-In the above example, XXXX is the id of one of the tokens generated in the `Tokens` section of the output from the `kubectl describe serviceaccount openunison -n openunison`.  The final command will output a large, base64 encoded token.  This token is what OpenUnison will use to communicate with Kubernetes.  Hold on to this value for the next step.
-
-## Create Roles and RoleBindings
-
-Once the service account is created, a RoleBinding giving it access to Kubernetes needs to be created.  Additionally, Roles and RoleBindings need to be created that will grant users with cluster administration access able to manage Kubernetes.
-
-```bash
-$ cat <<EOF | kubectl create -f -
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: openunison-cluster-administrators
-subjects:
-- kind: Group
-  name: k8s-cluster-administrators
-  apiGroup: rbac.authorization.k8s.io
-- kind: ServiceAccount
-  name: openunison
-  namespace: openunison
-roleRef:
-  kind: ClusterRole
-  name: cluster-admin
-  apiGroup: rbac.authorization.k8s.io
-EOF
-
-$ cat <<EOF | kubectl create -f -
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: list-namespaces
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - namespaces
-  verbs:
-  - list
-EOF
-
-
-$ cat <<EOF | kubectl create -f -
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: openunison-cluster-list-namespaces
-subjects:
-- kind: Group
-  name: users
-  apiGroup: rbac.authorization.k8s.io
-roleRef:
-  kind: ClusterRole
-  name: list-namespaces
-  apiGroup: rbac.authorization.k8s.io
-EOF
-```
-The first RoleBinding allows for our service account and for users with the `k8s-cluster-administrators` group to be members of the `cluster-admin` role.  The next two objects create a simple role and binding that will let any user from OpenUnison list the namespaces.  This is needed for the dashboard to function properly.
+1. Kubernetes 1.10 or higher
+2. The Nginx Ingress Controler deployed (https://kubernetes.github.io/ingress-nginx/deploy/)
+3. A MySQL or MariaDB Database
+4. The certificate authority certificate for your Active Directory forest
+5. An SMTP server for sending notifications
 
 ## Create Environments File
 
-OpenUnison stores environment specific information, such as host names, passwords, etc, in a properties file that will then be loaded by OpenUnison.  This file will be stored in OpenShift as a secret then accessed by OpenUnison on startup to fill in the `#[]` parameters in `unison.xml` and `myvd.conf`.  For instance the parameter `#[OU_HOST]` in `unison.xml` would have an entry in this file.  Below is an example file, this file should be saved as `ou.env`:
+OpenUnison stores environment specific information, such as host names, passwords, etc, in a properties file that will then be loaded by OpenUnison and merged with its configruation.  This file will be stored in Kubernetes as a secret then accessed by OpenUnison on startup to fill in the `#[]` parameters in `unison.xml` and `myvd.conf`.  For instance the parameter `#[OU_HOST]` in `unison.xml` would have an entry in this file.  Below is an example file:
 
 ```properties
-OU_HOST=openunison.tslocal.lan
+OU_HOST=k8sou.tremolo.lan
+K8S_DASHBOARD_HOST=k8sdb.tremolo.lan
+K8S_URL=https://k8s-installer-master.tremolo.lan:6443
+OU_COOKIE_DOMAIN=tremolo.lan
 OU_HIBERNATE_DIALECT=org.hibernate.dialect.MySQL5InnoDBDialect
 OU_JDBC_DRIVER=com.mysql.jdbc.Driver
-OU_JDBC_URL=jdbc:mysql://192.168.56.1:3306/unison
+OU_JDBC_URL=jdbc:mysql://dbs.tremolo.lan:3308/unison
 OU_JDBC_USER=root
 OU_JDBC_PASSWORD=start123
+OU_JDBC_VALIDATION=SELECT 1
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=something@gmail.com
-SMTP_PASSWORD=XXXXXXX
-SMTP_FROM=something@gmail.com
+SMTP_USER=donotreply@domain.com
+SMTP_PASSWORD=xxxx
+SMTP_FROM=donotreply@domain.com
 SMTP_TLS=true
-OU_JDBC_VALIDATION=SELECT 1
-K8S_URL=https://kubernetes.default.svc:6443
-K8S_TOKEN=eyJhbGciOiJS...
-unisonKeystorePassword=start123
-K8S_DASHBOARD_URL=https://192.168.56.100:30443
-K8S_DASHBOARD_HOST=k8sdb.tslocal.lan
-K8S_DHASBOARD_LINK=https://k8sdb.tslocal.lan/
-OU_COOKIE_DOMAIN=tslocal.lan
-AD_BASE_DN=cn=users,dc=ent2k16,dc=domain,dc=com
-AD_HOST=192.168.56.25
+AD_BASE_DN=cn=users,dc=ent2k12,dc=domain,dc=com
+AD_HOST=192.168.2.75
 AD_PORT=636
-AD_BIND_DN=cn=Administrator,cn=users,dc=ent2k16,dc=domain,dc=com
-AD_BIND_PASSWORD=XXXXX
+AD_BIND_DN=cn=Administrator,cn=users,dc=ent2k12,dc=domain,dc=com
+AD_BIND_PASSWORD=password
 AD_CON_TYPE=ldaps
 SRV_DNS=false
+OU_CERT_OU=k8s
+OU_CERT_O=Tremolo Security
+OU_CERT_L=Alexandria
+OU_CERT_ST=Virginia
+OU_CERT_C=US
+unisonKeystorePassword=start123
 ```
 
-A few notes about the above properties:
+*Detailed Description or Properties*
 
-1. The Kubernetes dashboard needs its own host name, seperate from OpenUnison.  This DNS name should point to OpenUnison (or the load balancer in front of OpenUnison)
-2. Include the token you generated earlier for the openunison service account
-3. If your Kubernetes master is using Active Directory's DNS, you can set `SRV_DNS` to `true` and change the host to the name of your domain 
+| Property | Description |
+| -------- | ----------- |
+| OU_HOST  | The host name for OpenUnison.  This is what user's will put into their browser to login to Kubernetes |
+| K8S_DASHBOARD_HOST | The host name for the dashboard.  This is what users will put into the browser to access to the dashboard. **NOTE:** `OU_HOST` and `K8S_DASHBOARD_HOST` **MUST** share the same DNS suffix. Both `OU_HOST` and `K8S_DASHBOARD_HOST` **MUST** point to OpenUnison |
+| K8S_URL | The URL for the Kubernetes API server |
+| OU_COOKIE_DOMAIN | The DNS Domain for cookies generated by OpenUnison.  This domain **MUST** contain both `OU_HOST` and `K8S_DASHBOARD_HOST` |
+| OU_HIBERNATE_DIALECT | Hibernate dialect for accessing the database.  Unless customizing for a different database do not change |
+| OU_JDBC_DRIVER | JDBC driver for accessing the database.  Unless customizing for a different database do not change |
+| OU_JDBC_URL | The URL for accessing the database |
+| OU_JDBC_USER | The user for accessing the database |
+| OU_JDBC_PASSWORD | The password for accessing the database |
+| OU_JDBC_VALIDATION | A query for validating database connections/ Unless customizing for a different database do not change |
+| SMTP_HOST | Host for an email server to send notifications |
+| SMTP_PORT | Port for an email server to send notifications |
+| SMTP_USER | Username for accessing the SMTP server (may be blank) |
+| SMTP_PASSWORD | Password for accessing the SMTP server (may be blank) |
+| SMTP_FROM | The email address that messages from OpenUnison are addressed from |
+| SMTP_TLS | true or false, depending if SMTP should use start tls |
+| AD_BASE_DN | The search base for Active Directory |
+| AD_HOST | The host name for a domain controller or VIP.  If using SRV records to determine hosts, this should be the fully qualified domain name of the domain |
+| AD_PORT | The port to communicate with Active Directory |
+| AD_BIND_DN | The full distinguished name (DN) of a read-only service account for working with Active Directory |
+| AD_BIND_PASSWORD | The password for the `AD_BIND_DN` |
+| AD_CON_TYPE | `ldaps` for secure, `ldap` for plain text |
+| SRV_DNS | If `true`, OpenUnison will lookup domain controllers by the domain's SRV DNS record |
+| OU_CERT_OU | The `OU` attribute for the forward facing certificate |
+| OU_CERT_O | The `O` attribute for the forward facing certificate |
+| OU_CERT_L | The `L` attribute for the forward facing certificate |
+| OU_CERT_ST | The `ST` attribute for the forward facing certificate |
+| OU_CERT_C | The `C` attribute for the forward facing certificate |
+| unisonKeystorePassword | The password for OpenUnison's keystore |
 
+## Prepare Deployment
 
-## Create OpenUnison YAML
+Perform these steps from a location with a working `kubectl` configuration:
 
-OpenUnison can be configured to use specific TLS ciphers or algorithms.  Create a file called `openunison.yaml` in the same directory where you created your ou.env and unisonKeyStore.jks file using the content from the [OpenUnisonS2IDocker ReadMe](https://github.com/TremoloSecurity/OpenUnisonS2IDocker/blob/master/README.md) under the section **openunison.yaml**.  Unless you have special requirements (ie you need to allow more or fewer ciphers) you shouldn't need to make any changes.   
+1. Create a directory to store `input.props`, ie `/path/to/props` and put `input.props` in that directory
+2. Create a directory for the Active Directory root certificate and store it there with the name `trusted-adldaps.pem`, ie `/path/to/certs`
 
-## Deploy OpenUnison Secret
+## Deployment
 
-Kubernetes stores secrets, ie passwords, keystores, etc in special volumes called Secrets.  Creating a secret involves base64 encoding your files and putting them into a YAML file, which is error prone.  To make this easier there's a script that will create the secret yaml for you so you can import it into Kubernetes in `src/main/bash`:
+Based on where you put the files from `Prepare Deployment`, run the following:
 
-```bash
-$ ./makesecret.sh /path/to/openunison-artifacts | kubectl create -f - -n openunison
+```
+curl https://raw.githubusercontent.com/TremoloSecurity/kubernetes-artifact-deployment/master/src/main/bash/deploy_openunison.sh | bash -s /path/to/certs /path/to/props https://raw.githubusercontent.com/TremoloSecurity/openunison-qs-kubernetes/activedirectory/src/main/yaml/artifact-deployment.yaml
 ```
 
-## Build OpenUnison
+The output will look like:
 
-OpenUnison is best built using the OpenUnison s2i builder.  This builder can either build OpenUnison based on an existing maven project, or it can simply deploy a war file of a pre-built OpenUnison project.  For a detailed explination of the OpenUnison build process, see OpenUnison's [deployment documentation](https://www.tremolosecurity.com/docs/tremolosecurity-docs/1.0.12/openunison/openunison-manual.html#_deploying_openunison_on_undertow).
-
-The OpenUnison Source2Image builder will pull your project from source control, build it (integrating the basic OpenUnison libraries) and create a docker image built on OpenUnison's Undertow implementation.  This image can then be pushed to your repository and refernced in your OpenUnison Deployment.  The first step is to have Docker installed.  Then download the proper s2i build for your platform from https://github.com/openshift/source-to-image/releases, build OpenUnison, push into your repository and finally deploy to Kubernetes.
-
-Now that the objects have been created, create a container using s2i using your OpenUnison project:
-
-```bash
-$ docker pull docker.io/tremolosecurity/openunisons2idocker:latest
-$ s2i build https://github.com/TremoloSecurity/openunison-qs-kubernetes.git docker.io/tremolosecurity/openunisons2idocker:latest localhost:5000/tremolosecurity/openunison-k8s
-$ docker push localhost:5000/tremolosecurity/openunison-k8s
+```
+namespace/openunison-deploy created
+configmap/extracerts created
+secret/input created
+clusterrolebinding.rbac.authorization.k8s.io/artifact-deployment created
+job.batch/artifact-deployment created
+NAME                        READY     STATUS    RESTARTS   AGE
+artifact-deployment-jzmnr   0/1       Pending   0          0s
+artifact-deployment-jzmnr   0/1       Pending   0         0s
+artifact-deployment-jzmnr   0/1       ContainerCreating   0         0s
+artifact-deployment-jzmnr   1/1       Running   0         4s
+artifact-deployment-jzmnr   0/1       Completed   0         15s
 ```
 
-Make sure to replace `localhost:5000` with the host of your Kubernetes registry.  Once the image is pushed, Now, we can create our `Deployment` and `Service`.  Edit `src/main/yaml/openunison_deployment.yaml` to suit your needs.  For instance, in the `container` `spec` edit the `image` attribute to point to the registry that is hosting your image.
+Once you see `Completed`, you can exit the script (`Ctl+C`).  This script creates all of the appropriate objects in Kubernetes, signs certificates and deploys both OpenUnison and the Dashboard.  
 
-```bash
-$ kubectl create -f ./openunison_deployment.yaml -n openunison
-```
+## Complete SSO Integration with Kubernetes
 
-At this point OpenUnison should begin to start.  Now we need to expose it to users so it can be accessed by creating a `Service`.  The `src/main/yaml/openunison_service.yaml` file contains a simple `Service` that will expose both an http and https port for OpenUnison.  You can either specify a specific port or allow an Ingres controller and load balancer expose OpenUnison over standard ports.
-
-```bash
-$ kubectl create -f ./openunison_service.yaml -n openunison
-```
+Run `kubectl describe configmap api-server-config -n openunison` to get the SSO integration artifacts.  The output will give you both the certificate that needs to be trusted and the API server flags that need to be configured on your API servers.
 
 ## First Login to the Kubernetes Identity Manager
 
-At this point you should be able to login to OpenUnison using the host specified in  the `HOSTNAME_HTTPS` of the template.  Once you are logged in, logout.  Users are created in the database "just-in-time", meaning that once you login the data representing your user is created inside of the database we are pointing to in our `ou.env` file.
+At this point you should be able to login to OpenUnison using the host specified in  the `OU_HOST` of your properties.  Once you are logged in, logout.  Users are created in the database "just-in-time", meaning that once you login the data representing your user is created inside of the database deployed for OpenUnison.
 
 ## Create First Administrator
 
-The user you logged in as is currently unprivileged.  In order for other users to login and begin requesting access to projects this first user must be enabled as an approver.  Login to the MySQL database that is configured in `ou.env` and execute the following SQL:
+The user you logged in as is currently unprivileged.  In order for other users to login and begin requesting access to projects this first user must be enabled as an approver.  Login to the MySQL database deployed for OpenUnison and execute the following SQL:
 
 ```sql
 insert into userGroups (userId,groupId) values (2,1);
@@ -263,19 +187,7 @@ Once SSO is enabled in the next step, you'll need a cluster administrator to be 
 
 At this point you will be provisioned to the `k8s-cluster-administrators` group in the database that has a RoleBinding to the `cluster-admin` Role.  Logout of OpenUnison and log back in.  If you click on your email address in the upper left, you'll see that you have the Role `k8s-cluster-administrators`.  
 
-## Enable Authentication with Kubernetes
-
-For a generic deployment, see the [Kubernetes Authentication](https://kubernetes.io/docs/admin/authentication/#openid-connect-tokens).  If using kubeadm, update `/etc/kubernetes/manifests/kube-apiserver.yaml` with the OpenID Connect parameters:
-
-```
-- --oidc-issuer-url=https://openunison.tslocal.lan/auth/idp/k8sIdp
-- --oidc-client-id=kubernetes
-- --oidc-username-claim=sub
-- --oidc-groups-claim=groups
-- --oidc-ca-file=/etc/kubernetes/pki/ou-ca.pem
-```
-
-The issuer will point to your OpenUnison instance, the ca certificate needs to be either trusted by the servers running Kubernetes or it will need to be explicitly referenced by the API server configuration.
-
 # Whats next?
+Users can now login to create namespaces, request access to cluster admin or request access to other clusters.
+
 Now you can begin mapping OpenUnison's capabilities to your business and compliance needs.  For instance you can add multi-factor authentication with TOTP or U2F, Create privileged workflows for onboarding, scheduled workflows that will deprovision users, etc.

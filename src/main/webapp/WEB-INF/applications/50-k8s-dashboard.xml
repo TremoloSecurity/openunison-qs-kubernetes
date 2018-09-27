@@ -5,7 +5,7 @@
       <filterChain>
       </filterChain>
       <uri>/</uri>
-      <proxyTo>#[K8S_DASHBOARD_URL]${fullURI}</proxyTo>
+      <proxyTo>https://kubernetes-dashboard.kube-system.svc.cluster.local${fullURI}</proxyTo>
       <results>
         <azSuccess>oauth2bearer</azSuccess>
       </results>
