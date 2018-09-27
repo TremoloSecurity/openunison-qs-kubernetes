@@ -326,7 +326,7 @@ ouSecrets = {
 
 k8s.postWS('/api/v1/namespaces/openunison/secrets',JSON.stringify(ouSecrets));
 
-print("Creating post deployment conigmap");
+print("Creating post deployment configmap");
 
 oidcFlags = "--oidc-issuer-url=https://" + inProp["OU_HOST"] + "/auth/idp/k8sIdp\n" +
             "--oidc-client-id=kubernetes\n" +
@@ -334,6 +334,9 @@ oidcFlags = "--oidc-issuer-url=https://" + inProp["OU_HOST"] + "/auth/idp/k8sIdp
             "--oidc-groups-claim=groups\n" +
             "--oidc-ca-file=/etc/kubernetes/pki/ou-ca.pem";
 
+print("Runing kubectl create");
+k8s.kubectlCreate(k8s.processTemplate(deploymentTemplate,inProp));
+print("kubectl complete");
 
 cfgMap = {
     "apiVersion":"v1",
@@ -344,8 +347,8 @@ cfgMap = {
     },
     "data":{
         "oidc-api-server-flags":oidcFlags,
-        "ou-ca.pem-base64-encoded":CertUtils.exportCert(ingressX509data.getCertificate()),
-        "deployment":java.util.Base64.getEncoder().encodeToString(k8s.processTemplate(deploymentTemplate,inProp).getBytes("UTF-8"))
+        "ou-ca.pem-base64-encoded":CertUtils.exportCert(ingressX509data.getCertificate())
+        //"deployment":java.util.Base64.getEncoder().encodeToString(k8s.processTemplate(deploymentTemplate,inProp).getBytes("UTF-8"))
     }
 };
 
