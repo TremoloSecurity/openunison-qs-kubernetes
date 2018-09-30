@@ -13,8 +13,44 @@
             <param name="name" value="sn"/>
             <param name="name" value="mail"/>
         </customTask>
+
+        <ifAttrHasValue name="tremolo.approval.group.exists" value="false">
+            <onSuccess>
+            <customTask className="com.tremolosecurity.provisioning.customTasks.AddGroupToStore">
+                <param name="target" value="jitdb"/>
+                <param name="name" value="approvers-k8s-$name$"/>
+                <param name="attributes" value="unison.group.create.sql=INSERT INTO localGroups (name,description) VALUES (?,?)"/>
+                <param name="attributes" value="unison.group.create.param.2=Approve access to $name$" />
+            </customTask>
+
+            <customTask className="com.tremolosecurity.unison.k8s.tasks.CopyGroupMembers">
+                <param name="copyWorkflow" value="addApproverUsers"/>
+                <param name="copyTo" value="approvers-k8s-$name$" />
+                <param name="copyFrom" value="cn=k8s-cluster-administrators,ou=groups,ou=shadow,o=Tremolo" />
+                <param name="uidAttributeName" value="uid" />
+                <param name="requestor" value="system" />
+            </customTask>
+
+            </onSuccess>
+        </ifAttrHasValue>
+
         <approval label="Approve Viewer Access to $name$">
             <onSuccess>
+
+              <customTask className="com.tremolosecurity.provisioning.customTasks.AddGroupToStore">
+                    <param name="target" value="jitdb"/>
+                    <param name="name" value="k8s-namespace-viewer-$name$"/>
+                    <param name="attributes" value="unison.group.create.sql=INSERT INTO localGroups (name,description) VALUES (?,?)"/>
+                    <param name="attributes" value="unison.group.create.param.2=Manage kubernetes namespace $name$" />
+                </customTask>
+
+                <customTask className="com.tremolosecurity.provisioning.tasks.CreateK8sObject">
+                    <param name="targetName" value="k8s"/>
+                    <param name="template" value="{&quot;kind&quot;:&quot;RoleBinding&quot;,&quot;apiVersion&quot;:&quot;rbac.authorization.k8s.io/v1&quot;,&quot;metadata&quot;:{&quot;name&quot;:&quot;viewers-binding&quot;,&quot;namespace&quot;:&quot;$name$&quot;},&quot;subjects&quot;:[{&quot;kind&quot;:&quot;Group&quot;,&quot;name&quot;:&quot;k8s-namespace-viewer-$name$&quot;,&quot;apiGroup&quot;:&quot;rbac.authorization.k8s.io&quot;}],&quot;roleRef&quot;:{&quot;kind&quot;:&quot;ClusterRole&quot;,&quot;name&quot;:&quot;view&quot;,&quot;apiGroup&quot;:&quot;rbac.authorization.k8s.io&quot;}}"/>
+                    <param name="kind" value="RoleBinding" />
+                    <param name="url" value="/apis/rbac.authorization.k8s.io/v1/namespaces/$name$/rolebindings" />
+                </customTask>
+
               <mapping  strict="true">
                 <map>
                   <mapping targetAttributeName="sub" sourceType="user" targetAttributeSource="uid"/>

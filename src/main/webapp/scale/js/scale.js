@@ -725,7 +725,7 @@ limitations under the License.
 
       this.finishApproval = function() {
         var approvalData = {};
-        approvalData.reason = this.currentApproval.reason;
+        approvalData.reason = this.currentApproval.justification;
         approvalData.approved = this.currentApproval.isApproved;
         this.approvalConfirmDisabled = true;
         this.approvalSuccess = false;

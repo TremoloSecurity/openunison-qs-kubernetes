@@ -90,7 +90,11 @@
                 <rule scope="group" constraint="cn=administrators,ou=groups,ou=shadow,o=Tremolo" />
               </azRules>
             </orgs>
-
+            <orgs name="System workflows" description="System workflows" uuid="63ada052-881e-4685-834d-dd48a3aa4bb4">
+                <azRules>
+                    <rule scope="filter" constraint="(!(objectClass=*))"/>
+                </azRules>
+            </orgs>
             <azRules/>
         </org>
         <queueConfig isUseInternalQueue="true" maxProducers="1" connectionFactory="com.tremolosecurity.provisioning.jms.providers.AwsSqsConnectionFactory" maxConsumers="1" taskQueueName="TremoloUnisonTaskQueue" smtpQueueName="TremoloUnisonSMTPQueue" encryptionKeyName="session-unison"/>

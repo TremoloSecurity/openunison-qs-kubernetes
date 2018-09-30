@@ -165,11 +165,11 @@
                         <param name="attributeNames" value="nameSpace"/>
                         <param name="nameSpace.displayName" value="Namespace Name"/>
                         <param name="nameSpace.readOnly" value="false"/>
-                        <param name="nameSpace.required" value="false"/>
-                        <param name="nameSpace.regEx" value=".*"/>
-                        <param name="nameSpace.regExFailedMsg" value="Required"/>
+                        <param name="nameSpace.required" value="true"/>
+                        <param name="nameSpace.regEx" value="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9]))*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$"/>
+                        <param name="nameSpace.regExFailedMsg" value="Invalid namespace name, must be a valid DNS host name"/>
                         <param name="nameSpace.minChars" value="0"/>
-                        <param name="nameSpace.maxChars" value="0"/>
+                        <param name="nameSpace.maxChars" value="63"/>
                         <param name="nameSpace.unique" value="false"/>
                         <param name="nameSpace.type" value="text"/>
                     </filter>
