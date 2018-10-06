@@ -305,6 +305,21 @@ ingressSecret = {
 
 k8s.postWS('/api/v1/namespaces/openunison/secrets',JSON.stringify(ingressSecret));
 
+
+//load quartz sql
+print("pulling quartz sql");
+quartzSQL = com.tremolosecurity.kubernetes.artifacts.util.NetUtil.downloadFile("https://raw.githubusercontent.com/quartznet/quartznet/master/database/tables/tables_mysql_innodb.sql");
+print("parsing quartz sql");
+parsedSQL = com.tremolosecurity.kubernetes.artifacts.util.DbUtils.parseSQL(quartzSQL);
+print("runnins quartz sql");
+com.tremolosecurity.kubernetes.artifacts.util.DbUtils.runSQL(parsedSQL,inProp["OU_JDBC_DRIVER"],inProp["OU_JDBC_URL"],inProp["OU_JDBC_USER"],inProp["OU_JDBC_PASSWORD"]);
+
+//create the ip mask
+myIp = com.tremolosecurity.kubernetes.artifacts.util.NetUtil.whatsMyIP();
+mask = myIp.substring(0,myIp.indexOf("."));
+inProp["OU_QUARTZ_MASK"] = mask;
+
+
 print("Create OpenUnison Secret");
 
 inProp["K8S_TOKEN"] = token;
@@ -340,13 +355,6 @@ print("kubectl complete");
 
 
 
-//load quartz sql
-print("pulling quartz sql");
-quartzSQL = com.tremolosecurity.kubernetes.artifacts.util.NetUtil.downloadFile("https://raw.githubusercontent.com/quartznet/quartznet/master/database/tables/tables_mysql_innodb.sql");
-print("parsing quartz sql");
-parsedSQL = com.tremolosecurity.kubernetes.artifacts.util.DbUtils.parseSQL(quartzSQL);
-print("runnins quartz sql");
-com.tremolosecurity.kubernetes.artifacts.util.DbUtils.runSQL(parsedSQL,inProp["OU_JDBC_DRIVER"],inProp["OU_JDBC_URL"],inProp["OU_JDBC_USER"],inProp["OU_JDBC_PASSWORD"]);
 
 
 
