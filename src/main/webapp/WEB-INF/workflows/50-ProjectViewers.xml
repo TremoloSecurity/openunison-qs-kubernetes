@@ -14,6 +14,12 @@
             <param name="name" value="mail"/>
         </customTask>
 
+        <customTask className="com.tremolosecurity.unison.k8s.tasks.DoesGroupExist">
+            <param name="target" value="jitdb"/>
+            <param name="groupName" value="approvers-k8s-$name$" />
+            <param name="attributeName" value="tremolo.approval.group.exists" />
+        </customTask>
+
         <ifAttrHasValue name="tremolo.approval.group.exists" value="false">
             <onSuccess>
             <customTask className="com.tremolosecurity.provisioning.customTasks.AddGroupToStore">

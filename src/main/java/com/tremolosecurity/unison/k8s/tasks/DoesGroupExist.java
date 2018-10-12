@@ -33,10 +33,13 @@ public class DoesGroupExist implements CustomTask {
     String groupName;
     String attributeName;
 
+    transient WorkflowTask task;
+
     @Override
     public boolean doTask(User user, Map<String, Object> request) throws ProvisioningException {
+        String localGroupName = task.renderTemplate(groupName, request);
         UserStoreProviderWithAddGroup provTarget = (UserStoreProviderWithAddGroup) GlobalEntries.getGlobalEntries().getConfigManager().getProvisioningEngine().getTarget(this.target).getProvider();
-        if (provTarget.isGroupExists(this.groupName, user, request)) {
+        if (provTarget.isGroupExists(localGroupName, user, request)) {
             user.getAttribs().put(this.attributeName, new Attribute(this.attributeName,"true"));
         } else {
             user.getAttribs().put(this.attributeName, new Attribute(this.attributeName,"false"));
@@ -50,11 +53,12 @@ public class DoesGroupExist implements CustomTask {
         this.target = config.get("target").getValues().get(0);
         this.groupName = config.get("groupName").getValues().get(0);
         this.attributeName = config.get("attributeName").getValues().get(0);
+        this.task = task;
 	}
 
 	@Override
 	public void reInit(WorkflowTask task) throws ProvisioningException {
-		
+		this.task = task;
 	}
 
     

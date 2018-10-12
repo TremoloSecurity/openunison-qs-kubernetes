@@ -116,8 +116,8 @@
               </azRules>
             </urls>
         </portal>
-        <scheduler useDB="false" threadCount="3" instanceLabel="local" instanceIPMask="172.">
-            <scheduleDB delegateClassName="org.quartz.impl.jdbcjobstore.CUBRIDDelegate" driver="com.mysql.fabric.jdbc.FabricMySQLDriver" url="" user="demo" password="demo" maxConnections="0" validationQuery=""/>
+        <scheduler useDB="true" threadCount="3" instanceLabel="local" instanceIPMask="#[OU_QUARTZ_MASK]">
+            <scheduleDB delegateClassName="#[OU_QUARTZ_DIALECT]" driver="#[OU_JDBC_DRIVER]" url="#[OU_JDBC_URL]" user="#[OU_JDBC_USER]" password="#[OU_JDBC_PASSWORD]" maxConnections="5" validationQuery="#[OU_JDBC_VALIDATION]"/>
             <job className="com.tremolosecurity.provisioning.scheduler.jobs.UpdateApprovalAz" name="resetAllowedApprovers" group="management">
             <!-- When to run the job -->
           	<cronSchedule

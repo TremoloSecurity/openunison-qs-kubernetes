@@ -9,7 +9,7 @@
 
     <Root level="info">
       <AppenderRef ref="STDOUT"/>
-    </Root>
+    </Root> 
     <Logger name="org.reflections"  level="info">
   <AppenderRef ref="STDOUT" level="error"/>
 </Logger>
