@@ -1,3 +1,7 @@
+# THIS IS ARCHIVED, PLEASE DO NOT USE
+
+Please go to https://github.com/openunison/
+
 # Kubernetes Identity Manager
 
 [![Alt text](http://i.vimeocdn.com/video/671443572_640.jpg)](https://vimeo.com/246464075)
